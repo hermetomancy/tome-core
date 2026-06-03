@@ -1,0 +1,42 @@
+export const package = {
+  name: "bash"
+  version: "5.3.0"
+  summary: "GNU Bourne Again Shell"
+  homepage: "https://www.gnu.org/software/bash/"
+  license: "GPL-3.0-or-later"
+  targets: ["linux-x86_64-gnu" "macos-aarch64-darwin"]
+
+  sources: {
+    main: {
+      url: "https://ftp.gnu.org/gnu/bash/bash-5.3.tar.gz"
+      sha256: "sha256:0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba"
+    }
+  }
+
+  deps: {
+    build: {}
+    runtime: []
+  }
+
+  bins: {
+    bash: "bin/bash"
+    sh: "bin/sh"
+  }
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.work_dir | path join "bash-5.3")
+  sh -c $"
+    set -eu
+    tar -xzf '($ctx.sources.main.path)' -C '($ctx.work_dir)'
+    cd '($source_dir)'
+    if ! ./configure --prefix='($ctx.prefix)' --without-bash-malloc; then
+      cat config.log
+      exit 1
+    fi
+    make
+    make install
+  "
+
+  cp ($ctx.package_dir | path join "bin" "bash") ($ctx.package_dir | path join "bin" "sh")
+}

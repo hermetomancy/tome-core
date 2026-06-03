@@ -1,0 +1,11 @@
+export const tome = {
+  name: "core"
+  description: "Bootstrap build tools for Grimoire source packages"
+
+  packages: {
+    repo: "dist"
+    format: "local"
+    index: "index.nuon"
+  }
+}
+
