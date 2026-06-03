@@ -3,9 +3,9 @@ export const tome = {
   description: "Bootstrap build tools for Grimoire source packages"
 
   packages: {
-    repo: "dist"
-    format: "local"
+    repo: "https://grimoire.mchal.lol/core"
+    format: "http"
     index: "index.nuon"
+    signer: "RWR1wzNVAwTwzbCsBwF4pI9k7DWFYdhlIGZD35NhLTj828XMOAaM7XY4"
   }
 }
-
