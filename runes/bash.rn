@@ -25,10 +25,9 @@ export const package = {
 }
 
 export def build [ctx] {
-  let source_dir = ($ctx.work_dir | path join "bash-5.3")
+  let source_dir = ($ctx.sources.main.dir | path join "bash-5.3")
   sh -c $"
     set -eu
-    tar -xzf '($ctx.sources.main.path)' -C '($ctx.work_dir)'
     cd '($source_dir)'
     if ! ./configure --prefix='($ctx.prefix)' --without-bash-malloc; then
       cat config.log
