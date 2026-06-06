@@ -1,0 +1,39 @@
+export const package = {
+  name: "llvm"
+  version: "19.1.0"
+  summary: "LLVM compiler infrastructure"
+  homepage: "https://llvm.org/"
+  license: "Apache-2.0 WITH LLVM-exception"
+  targets: ["linux-x86_64-musl" "linux-aarch64-musl" "linux-x86_64-gnu" "linux-aarch64-gnu" "macos-x86_64-darwin" "macos-aarch64-darwin" "freebsd-x86_64-unknown" "freebsd-aarch64-unknown"]
+
+  sources: {
+    main: {
+      url: "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.0/llvm-project-19.1.0.src.tar.xz"
+      sha256: "sha256:5042522b49945bc560ff9206f25fb87980a9b89b914193ca00d961511ff0673c"
+    }
+  }
+
+  deps: {
+    build: {}
+    runtime: []
+  }
+
+  bins: {
+    lld: "bin/lld"
+    llvm-ar: "bin/llvm-ar"
+    llvm-strip: "bin/llvm-strip"
+    llvm-nm: "bin/llvm-nm"
+    llvm-ranlib: "bin/llvm-ranlib"
+  }
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join "llvm-project-19.1.0.src")
+  sh -c $"
+    set -eu
+    cd '($source_dir)'
+    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX='($ctx.prefix)' -DLLVM_ENABLE_PROJECTS='lld' -DLLVM_TARGETS_TO_BUILD='X86;AArch64' -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_LIBXML2=OFF
+    cmake --build build
+    cmake --install build --prefix '($ctx.package_dir)'
+  "
+}

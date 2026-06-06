@@ -1,0 +1,33 @@
+export const package = {
+  name: "musl"
+  version: "1.2.5"
+  summary: "musl libc"
+  homepage: "https://musl.libc.org/"
+  license: "MIT"
+  targets: ["linux-x86_64-musl" "linux-aarch64-musl" "linux-x86_64-gnu" "linux-aarch64-gnu"]
+
+  sources: {
+    main: {
+      url: "https://musl.libc.org/releases/musl-1.2.5.tar.gz"
+      sha256: "sha256:a9a118bbe84d8764da0ea0d28b3ab3fae8477fc7e4085d90102b8596fc7c75e4"
+    }
+  }
+
+  deps: {
+    build: { default: ["linux-headers[linux]"] }
+    runtime: []
+  }
+
+  bins: {}
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join "musl-1.2.5")
+  sh -c $"
+    set -eu
+    cd '($source_dir)'
+    ./configure --prefix='($ctx.prefix)' --disable-shared
+    make
+    make install DESTDIR='($ctx.package_dir)'
+  "
+}
