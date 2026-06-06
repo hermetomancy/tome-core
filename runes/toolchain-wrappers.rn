@@ -17,9 +17,11 @@ export const package = {
     cc: "bin/cc"
     "c++": "bin/c++"
     ar: "bin/ar"
+    as: "bin/as"
     ld: "bin/ld"
     nm: "bin/nm"
     ranlib: "bin/ranlib"
+    size: "bin/size"
     strip: "bin/strip"
     objcopy: "bin/objcopy"
     objdump: "bin/objdump"
@@ -38,18 +40,34 @@ export def build [ctx] {
   mkdir ($ctx.package_dir | path join "etc")
 
   let is_macos = ($ctx.target | str starts-with "macos-")
+  let ld_target = if $is_macos { "/usr/bin/ld" } else { $"($env.LLVM_PREFIX)/bin/lld" }
+
   let wrappers = {
     cc: $"($env.CLANG_PREFIX)/bin/clang"
     "c++": $"($env.CLANG_PREFIX)/bin/clang++"
     ar: $"($env.LLVM_PREFIX)/bin/llvm-ar"
-    ld: (if $is_macos { "/usr/bin/ld" } else { $"($env.LLVM_PREFIX)/bin/lld" })
+    as: $"($env.LLVM_PREFIX)/bin/llvm-as"
+    ld: $ld_target
     nm: $"($env.LLVM_PREFIX)/bin/llvm-nm"
     ranlib: $"($env.LLVM_PREFIX)/bin/llvm-ranlib"
+    size: $"($env.LLVM_PREFIX)/bin/llvm-size"
     strip: $"($env.LLVM_PREFIX)/bin/llvm-strip"
     objcopy: $"($env.LLVM_PREFIX)/bin/llvm-objcopy"
     objdump: $"($env.LLVM_PREFIX)/bin/llvm-objdump"
     readelf: $"($env.LLVM_PREFIX)/bin/llvm-readelf"
     strings: $"($env.LLVM_PREFIX)/bin/llvm-strings"
+  }
+
+  let wrappers = if $is_macos {
+    $wrappers | merge {
+      dsymutil: $"($env.LLVM_PREFIX)/bin/llvm-dsymutil"
+      lipo: $"($env.LLVM_PREFIX)/bin/llvm-lipo"
+      libtool: $"($env.LLVM_PREFIX)/bin/llvm-libtool-darwin"
+      otool: $"($env.LLVM_PREFIX)/bin/llvm-otool"
+      install_name_tool: $"($env.LLVM_PREFIX)/bin/llvm-install-name-tool"
+    }
+  } else {
+    $wrappers
   }
 
   for key in $wrappers {
