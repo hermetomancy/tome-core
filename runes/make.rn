@@ -4,7 +4,7 @@ export const package = {
   summary: "GNU Make build automation tool"
   homepage: "https://www.gnu.org/software/make/"
   license: "GPL-3.0-or-later"
-  targets: ["linux-x86_64-gnu" "linux-aarch64-gnu" "macos-x86_64-darwin" "macos-aarch64-darwin" "freebsd-x86_64-unknown" "freebsd-aarch64-unknown"]
+  targets: ["linux-x86_64-musl" "linux-aarch64-musl" "linux-x86_64-gnu" "linux-aarch64-gnu" "macos-x86_64-darwin" "macos-aarch64-darwin" "freebsd-x86_64-unknown" "freebsd-aarch64-unknown"]
 
   sources: {
     main: {
