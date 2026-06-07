@@ -28,12 +28,13 @@ export const package = {
 }
 
 export def build [ctx] {
+  let nproc = (sh -c "nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4" | str trim | into int)
   let source_dir = ($ctx.sources.main.dir | path join "llvm-project-19.1.0.src")
   sh -c $"
     set -eu
     cd '($source_dir)'
     cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX='($ctx.prefix)' -DLLVM_ENABLE_PROJECTS='lld' -DLLVM_TARGETS_TO_BUILD='X86;AArch64' -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_LIBXML2=OFF
-    cmake --build build
+    cmake --build build --parallel ($nproc)
     cmake --install build --prefix '($ctx.package_dir)'
   "
 }

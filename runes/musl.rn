@@ -22,12 +22,13 @@ export const package = {
 }
 
 export def build [ctx] {
+  let nproc = (sh -c "nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4" | str trim | into int)
   let source_dir = ($ctx.sources.main.dir | path join "musl-1.2.5")
   sh -c $"
     set -eu
     cd '($source_dir)'
     ./configure --prefix='($ctx.prefix)' --disable-shared
-    make
+    make -j($nproc)
     make install DESTDIR='($ctx.package_dir)'
   "
 }

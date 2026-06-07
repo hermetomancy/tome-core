@@ -22,10 +22,11 @@ export const package = {
 }
 
 export def build [ctx] {
+  let nproc = (sh -c "nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4" | str trim | into int)
   let source_dir = ($ctx.sources.main.dir | path join "linux-6.12")
   sh -c $"
     set -eu
     cd '($source_dir)'
-    make headers_install INSTALL_HDR_PATH='($ctx.package_dir)'
+    make -j($nproc) headers_install INSTALL_HDR_PATH='($ctx.package_dir)'
   "
 }
