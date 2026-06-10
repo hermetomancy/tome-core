@@ -12,7 +12,7 @@ export const package = {
   }
 
   deps: {
-    build: { default: ["llvm" "cmake"] }
+    build: { default: ["llvm" "cmake" "make" "python3"] }
     runtime: []
   }
 

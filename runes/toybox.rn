@@ -12,7 +12,7 @@ export const package = {
   }
 
   deps: {
-    build: {}
+    build: { default: ["make"] }
     runtime: []
   }
 

@@ -14,7 +14,7 @@ export const package = {
   }
 
   deps: {
-    build: { default: ["linux-headers[linux]"] }
+    build: { default: ["linux-headers[linux]" "make"] }
     runtime: []
   }
 

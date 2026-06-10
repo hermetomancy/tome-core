@@ -9,6 +9,8 @@ export const package = {
       url: "https://www.python.org/ftp/python/3.14.5/Python-3.14.5.tar.xz"
       sha256: "sha256:7e32597b99e5d9a39abed35de4693fa169df3e5850d4c334337ffd6a19a36db6"
     }
+    # TODO: vendor this into the tome's sources/ — the URL tracks a moving Alpine branch,
+    # so the pinned hash will eventually stop matching when the branch advances.
     musl_patch: {
       url: "https://git.alpinelinux.org/aports/plain/main/python3/musl-find_library.patch?h=3.21-stable"
       sha256: "sha256:83fd071bc556d4e88373a35fde74cb9c464ee4b8e95e5583b55f2e36d4f33cf2"
@@ -16,7 +18,7 @@ export const package = {
   }
 
   deps: {
-    build: {}
+    build: { default: ["make"] }
     runtime: []
   }
 }
@@ -26,8 +28,9 @@ export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "Python-3.14.5")
   cd $source_dir
 
-  let is_linux = ($ctx.target | str starts-with "linux-")
-  if $is_linux {
+  # The find_library patch teaches ctypes musl's library naming; it is wrong for glibc,
+  # so gate on the musl ABI rather than the OS.
+  if ($ctx.target | str ends-with "-musl") {
     let patch_path = ($ctx.sources.musl_patch.path)
     patch -p1 -i $patch_path
   }

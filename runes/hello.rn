@@ -19,15 +19,14 @@ export const package = {
 
 export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "hello-2.12.1")
-  let libs = if ($ctx.target | str starts-with "macos-") { "-liconv" } else { "" }
+  cd $source_dir
   # `--disable-nls` keeps GNU Hello off gettext/libintl, which the core tome does not package yet.
   # `--disable-dependency-tracking` skips automake's compiler dep-mode probe (only useful for
   # incremental rebuilds) — it is the standard one-shot packaging flag and avoids a brittle probe.
-  sh -c $"
-    set -eu
-    cd '($source_dir)'
-    LIBS='($libs)' ./configure --prefix='($ctx.prefix)' --disable-nls --disable-dependency-tracking
-    make
-    make install DESTDIR='($ctx.package_dir)'
-  "
+  if ($ctx.target | str starts-with "macos-") {
+    $env.LIBS = "-liconv"
+  }
+  ./configure --prefix=($ctx.prefix) --disable-nls --disable-dependency-tracking
+  make -j ($ctx.nproc)
+  make install DESTDIR=($ctx.package_dir)
 }

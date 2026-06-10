@@ -11,8 +11,10 @@ export const package = {
     }
   }
 
+  # cmake's default generator emits Makefiles (hence make), and LLVM's build requires a
+  # Python interpreter. Both declared so a pure-managed (toybox-ambient) build works.
   deps: {
-    build: { default: ["cmake"] }
+    build: { default: ["cmake" "make" "python3"] }
     runtime: []
   }
 
@@ -22,7 +24,7 @@ export def build [ctx] {
   let nproc = $ctx.nproc
   let source_dir = ($ctx.sources.main.dir | path join "llvm-project-19.1.0.src")
   cd $source_dir
-  cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_ENABLE_PROJECTS=lld -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_LIBXML2=OFF
+  cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_ENABLE_PROJECTS=lld -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF
   cmake --build build --parallel ($nproc)
   cmake --install build --prefix ($ctx.package_dir)
 }

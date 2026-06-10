@@ -11,8 +11,10 @@ export const package = {
     }
   }
 
+  # `make` drives both the bootstrap and the main build. Declared (despite being POSIX)
+  # because the self-hosted ambient userland is toybox, which does not ship make.
   deps: {
-    build: {}
+    build: { default: ["make"] }
     runtime: []
   }
 }

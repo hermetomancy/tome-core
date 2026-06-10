@@ -23,6 +23,9 @@ export def build [ctx] {
   mkdir ($ctx.package_dir | path join "etc")
 
   let is_macos = ($ctx.target | str starts-with "macos-")
+  # Deliberate host-path exception: lld's Mach-O support is not yet a drop-in ld64
+  # replacement, so the macOS wrapper delegates to the system linker. This is the single
+  # host path baked into the core tome; revisit when ld64.lld matures.
   let ld_target = if $is_macos { "/usr/bin/ld" } else { $"($env.LLVM_PREFIX)/bin/lld" }
 
   let wrappers = {
