@@ -1,13 +1,14 @@
 export const package = {
   name: "hello"
-  version: "2.12.1"
+  version: "2.12.3"
   summary: "GNU Hello, the canonical example program"
   homepage: "https://www.gnu.org/software/hello/"
   license: "GPL-3.0-or-later"
   sources: {
     main: {
-      url: "https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz"
-      sha256: "sha256:8d99142afd92576f30b0cd7cb42a8dc6809998bc5d607d88761f512e26c7db20"
+      url: "https://ftp.gnu.org/gnu/hello/hello-2.12.3.tar.gz"
+      # sha256 must be recomputed: sha256sum hello-2.12.3.tar.gz
+      sha256: "sha256:PLACEHOLDER"
     }
   }
 
@@ -18,7 +19,7 @@ export const package = {
 }
 
 export def build [ctx] {
-  let source_dir = ($ctx.sources.main.dir | path join "hello-2.12.1")
+  let source_dir = ($ctx.sources.main.dir | path join "hello-2.12.3")
   cd $source_dir
   # `--disable-nls` keeps GNU Hello off gettext/libintl, which the core tome does not package yet.
   # `--disable-dependency-tracking` skips automake's compiler dep-mode probe (only useful for

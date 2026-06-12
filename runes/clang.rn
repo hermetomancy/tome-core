@@ -1,13 +1,14 @@
 export const package = {
   name: "clang"
-  version: "19.1.0"
+  version: "22.1.7"
   summary: "Clang C/C++ compiler"
   homepage: "https://clang.llvm.org/"
   license: "Apache-2.0 WITH LLVM-exception"
   sources: {
     main: {
-      url: "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.0/llvm-project-19.1.0.src.tar.xz"
-      sha256: "sha256:5042522b49945bc560ff9206f25fb87980a9b89b914193ca00d961511ff0673c"
+      url: "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.7/llvm-project-22.1.7.src.tar.xz"
+      # sha256 must be recomputed: sha256sum llvm-project-22.1.7.src.tar.xz
+      sha256: "sha256:PLACEHOLDER"
     }
   }
 
@@ -20,7 +21,7 @@ export const package = {
 
 export def build [ctx] {
   let nproc = $ctx.nproc
-  let source_dir = ($ctx.sources.main.dir | path join "llvm-project-19.1.0.src")
+  let source_dir = ($ctx.sources.main.dir | path join "llvm-project-22.1.7.src")
   cd $source_dir
   cmake -S clang -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_DIR=($env.LLVM_PREFIX | path join "lib/cmake/llvm") -DCLANG_DEFAULT_LINKER=lld -DLLVM_INCLUDE_TESTS=OFF
   cmake --build build --parallel ($nproc)
