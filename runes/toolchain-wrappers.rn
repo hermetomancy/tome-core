@@ -26,10 +26,12 @@ export def build [ctx] {
   mkdir ($ctx.package_dir | path join "etc")
 
   let is_macos = ($ctx.target | str starts-with "macos-")
-  # Deliberate host-path exception: lld's Mach-O support is not yet a drop-in ld64
-  # replacement, so the macOS wrapper delegates to the system linker. This is the single
-  # host path baked into the core tome; revisit when ld64.lld matures.
-  let ld_target = if $is_macos { "/usr/bin/ld" } else { $"($env.LLVM_PREFIX)/bin/lld" }
+  # ld64.lld on macOS too: clang already defaults to lld (CLANG_DEFAULT_LINKER), so every
+  # driver-mediated link has used it all along — this alias only covers direct `ld`
+  # invocations, and pointing it at the managed linker removes the last host-linker path
+  # (and the host ld64 banner from build_env_id, so Xcode updates stop re-addressing the
+  # store). ld64.lld speaks the ld64 CLI.
+  let ld_target = if $is_macos { $"($env.LLVM_PREFIX)/bin/ld64.lld" } else { $"($env.LLVM_PREFIX)/bin/lld" }
 
   # gcc/g++ are aliases for the managed clang: autotools probes the name `gcc` before
   # `cc`, and without these the *host* gcc wins from the ambient PATH tail — exactly the
