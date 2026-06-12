@@ -11,6 +11,9 @@ export const package = {
   split_from: "llvm"
   files: [
     "bin/clang*"
+    # In LLVM >= 21 bin/clang-offload-packager is a symlink to llvm-offload-binary, and
+    # the partition refuses to separate a symlink from its target — claim both.
+    "bin/llvm-offload-binary"
     "bin/c-index-test"
     "bin/diagtool"
     "bin/hmaptool"
