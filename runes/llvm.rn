@@ -30,7 +30,10 @@ export def build [ctx] {
   cd $source_dir
   # LLVM_INSTALL_UTILS ships FileCheck/not/count with the install — rust's bootstrap
   # sanity-checks for FileCheck beside any external llvm-config it is pointed at.
-  cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
+  # ZSTD is disabled like zlib/libxml2: LLVM >= 22 finds a host zstd at configure time,
+  # and consumers that link LLVM statically (rustc via llvm-config) then fail with
+  # undefined ZSTD_* symbols because the host lib is not on their link path.
+  cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
   cmake --build build --parallel ($nproc)
   cmake --install build --prefix ($ctx.package_dir)
 }
