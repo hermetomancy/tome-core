@@ -8,7 +8,13 @@ export const package = {
   # Split member: built by llvm.rn's monorepo build; these globs claim clang's slice of
   # that build's output. An individual glob may match nothing (build options vary what
   # exists) — the build fails only if the member as a whole claims no files.
+  # lib/clang/** is the resource directory, which includes the compiler-rt runtimes the
+  # monorepo build installs there (LLVM_ENABLE_RUNTIMES) — the builtins live inside this
+  # package, where the clang driver looks for them.
   split_from: "llvm"
+
+  # Supersedes the old standalone compiler-rt package: the runtimes now ship in here.
+  replaces: ["compiler-rt"]
   files: [
     "bin/clang*"
     # In LLVM >= 21 bin/clang-offload-packager is a symlink to llvm-offload-binary, and

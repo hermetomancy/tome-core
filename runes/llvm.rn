@@ -24,6 +24,13 @@ export const package = {
 # supported configuration is LLVM_ENABLE_PROJECTS, not standalone sub-project builds, and
 # it compiles the shared LLVM libraries once instead of per project. clang's files are
 # carved out post-build by clang.rn's `files` globs; lld stays in this package.
+#
+# compiler-rt builds via LLVM_ENABLE_RUNTIMES: the runtimes sub-build configures with the
+# just-built clang and installs into clang's resource directory (lib/clang/<major>/), so
+# the builtins ship inside the clang split member — exactly where the clang driver looks
+# for them, with no separate package or discovery wiring. COMPILER_RT_-prefixed flags pass
+# through to the runtimes sub-build; the Apple OS variants are disabled as the old
+# standalone compiler-rt build did.
 export def build [ctx] {
   let nproc = $ctx.nproc
   let source_dir = ($ctx.sources.main.dir | path join "llvm-project-22.1.7.src")
@@ -33,7 +40,7 @@ export def build [ctx] {
   # ZSTD is disabled like zlib/libxml2: LLVM >= 22 finds a host zstd at configure time,
   # and consumers that link LLVM statically (rustc via llvm-config) then fail with
   # undefined ZSTD_* symbols because the host lib is not on their link path.
-  cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
+  cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
   cmake --build build --parallel ($nproc)
   cmake --install build --prefix ($ctx.package_dir)
 }
