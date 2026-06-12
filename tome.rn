@@ -6,6 +6,6 @@ export const tome = {
     repo: "https://grimoire.mchal.lol/core"
     format: "http"
     index: "index.nuon"
-    signer: "RWR1wzNVAwTwzbCsBwF4pI9k7DWFYdhlIGZD35NhLTj828XMOAaM7XY4"
+    signer: "RWR8rJxmotXM1NhQBsJZQfEeWtSP+3x67Nih78Tl7An5o7UQ8gWwmTt6"
   }
 }
