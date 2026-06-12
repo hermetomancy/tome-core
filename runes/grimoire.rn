@@ -1,0 +1,63 @@
+# Grimoire itself, built from source — `grm upgrade grimoire` is the self-update path
+# (safe: the running binary keeps its inode; the generation flip is atomic).
+#
+# Crates are fetched by cargo at build time and verified against the Cargo.lock inside the
+# sha256-pinned source tarball (`--locked`), per the project's vendoring decision — the
+# whole crate set is transitively covered by the store hash through the lock.
+#
+# Pinning convention (rune-authoring.md "Version policy"): release tags use the tag version;
+# between-tag pins use `0.1.0-dev.YYYYMMDD` (semver prerelease — orders below the release
+# and chronologically among themselves) against a codeload commit tarball.
+#
+# To pin a new commit:
+#   COMMIT=<full sha>
+#   curl -sL https://codeload.github.com/grimoire-of-glass/grimoire/tar.gz/$COMMIT | shasum -a 256
+# then update COMMIT, the version date, and the sha256 below.
+
+# REPLACE before first build: the pinned commit and its tarball hash.
+const COMMIT = "81bba1b339df77113c4bec7e2147ca0083cff2fd"
+
+export const package = {
+  name: "grimoire"
+  version: "0.1.0-dev.20260612"
+  summary: "Grimoire itself: the grm package manager, built from source"
+  homepage: "https://github.com/grimoire-of-glass/grimoire"
+  license: "MIT"
+
+  sources: {
+    main: {
+      url: "https://codeload.github.com/grimoire-of-glass/grimoire/tar.gz/81bba1b339df77113c4bec7e2147ca0083cff2fd"
+      sha256: "sha256:674b9d5fb714a6ceb7d24177b77cb106ffed0cbc93090501f4e1981a5881cad7"
+    }
+  }
+
+  deps: {
+    # rust provides rustc/cargo; cc for the -sys crates' C code (zstd, liblzma static,
+    # ring) comes from toolchain-wrappers via rust's runtime deps.
+    build: { default: ["rust"] }
+    runtime: []
+  }
+
+  bins: {
+    default: {
+      grm: "bin/grm"
+    }
+  }
+
+  notes: [
+    "self-update from now on: grm upgrade grimoire"
+  ]
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join $"grimoire-($COMMIT)")
+  cd $source_dir
+
+  # --locked: the lockfile inside the pinned tarball is the (transitively hashed) truth for
+  # every crate; cargo verifies each download against it. Network use here is the documented
+  # vendoring policy, not an accident.
+  ^cargo build --release --locked --jobs ($ctx.nproc)
+
+  mkdir ($ctx.package_dir | path join "bin")
+  ^cp target/release/grm ($ctx.package_dir | path join "bin" "grm")
+}
