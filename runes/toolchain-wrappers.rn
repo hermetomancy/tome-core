@@ -47,9 +47,10 @@ export def build [ctx] {
     strings: $"($env.LLVM_PREFIX)/bin/llvm-strings"
   }
 
+  # No dsymutil wrapper: llvm ships the real `dsymutil` binary itself, and both packages
+  # are linked together (build-env), so an alias here would contest the bin name.
   let wrappers = if $is_macos {
     $wrappers | merge {
-      dsymutil: $"($env.LLVM_PREFIX)/bin/llvm-dsymutil"
       lipo: $"($env.LLVM_PREFIX)/bin/llvm-lipo"
       libtool: $"($env.LLVM_PREFIX)/bin/llvm-libtool-darwin"
       otool: $"($env.LLVM_PREFIX)/bin/llvm-otool"
