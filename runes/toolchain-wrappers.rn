@@ -31,7 +31,9 @@ export def build [ctx] {
   # invocations, and pointing it at the managed linker removes the last host-linker path
   # (and the host ld64 banner from build_env_id, so Xcode updates stop re-addressing the
   # store). ld64.lld speaks the ld64 CLI.
-  let ld_target = if $is_macos { $"($env.LLVM_PREFIX)/bin/ld64.lld" } else { $"($env.LLVM_PREFIX)/bin/lld" }
+  # ld.lld / ld64.lld, never plain `lld`: lld dispatches on argv[0], and the bare name is
+  # the "generic driver" that refuses to link without -flavor.
+  let ld_target = if $is_macos { $"($env.LLVM_PREFIX)/bin/ld64.lld" } else { $"($env.LLVM_PREFIX)/bin/ld.lld" }
 
   # gcc/g++ are aliases for the managed clang: autotools probes the name `gcc` before
   # `cc`, and without these the *host* gcc wins from the ambient PATH tail — exactly the
