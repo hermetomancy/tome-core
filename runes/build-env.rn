@@ -1,0 +1,35 @@
+export const package = {
+  name: "build-env"
+  version: "0.1.0"
+  summary: "Meta-package: the managed build environment's toolchain, in one install"
+  homepage: "https://grimoire.mchal.lol/"
+  license: "MIT"
+  sources: {}
+
+  # Pure meta-package: ships a marker file and pulls the managed toolchain through its
+  # runtime deps (toolchain-wrappers transitively brings clang and llvm). Out-of-core
+  # packages that compile from source declare `build: ["build-env"]` instead of
+  # enumerating the toolchain; the dep's runtime closure is installed store-only and the
+  # core packages' bin dirs join the build PATH once present.
+  #
+  # Note: declaring build-env yields no useful `<DEP>_PREFIX` variables (it has no
+  # contents of its own). A rune that needs a concrete prefix — `$env.LLVM_PREFIX`,
+  # `$env.PYTHON3_PREFIX` — must declare that package directly, alongside build-env.
+  deps: {
+    build: {}
+    runtime: [
+      "toolchain-wrappers"
+      "cmake"
+      "make"
+      "python3"
+      "toybox"
+      "linux-headers[linux]"
+      "musl[linux]"
+    ]
+  }
+}
+
+export def build [ctx] {
+  mkdir ($ctx.package_dir | path join "share" "build-env")
+  "build-env: meta-package pulling the managed toolchain via runtime deps\n" | save ($ctx.package_dir | path join "share" "build-env" "README")
+}
