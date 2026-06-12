@@ -25,7 +25,7 @@ export const package = {
     runtime: [
       "toolchain-wrappers"
       "cmake"
-      "make"
+      "gmake"
       "python3"
       "toybox"
       "linux-headers[linux]"

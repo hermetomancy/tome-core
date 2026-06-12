@@ -52,7 +52,7 @@ export const package = {
     # rust-stage0 seeds the bootstrap; llvm provides llvm-config; python3 runs x.py; cmake
     # and make cover the native build scripts of vendored -sys crates. rustc's bootstrap
     # accepts a bounded LLVM range for an external llvm-config: 1.96 needs >= 21.
-    build: { default: ["rust-stage0" { name: "llvm", version: ">=21" } "python3" "cmake" "make"] }
+    build: { default: ["rust-stage0" { name: "llvm", version: ">=21" } "python3" "cmake" "gmake"] }
     # rustc invokes the system linker driver (`cc`) for every link; toolchain-wrappers is
     # what actually puts `cc` (delegating to the managed clang) on PATH.
     runtime: ["toolchain-wrappers"]
