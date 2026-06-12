@@ -11,11 +11,6 @@ export const package = {
     }
   }
 
-  # GNU make under its implementation name, shipping both command names (rune-authoring.md
-  # "Naming rule"): consumers that need GNU semantics declare and may invoke `gmake`; the
-  # generic `make` is the capability every upstream build system actually runs.
-  replaces: ["gmake"]
-
   # The bootstrap seed: built first using the host POSIX userland (sh, make) and the
   # compiler boundary, so it declares no managed build dependencies. It is then installed
   # store-only so later runes in a `grm tome build --all` can use it as a build dependency.
