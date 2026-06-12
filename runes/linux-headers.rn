@@ -1,6 +1,6 @@
 export const package = {
   name: "linux-headers"
-  version: "6.12"
+  version: "6.12.93"
   summary: "Linux kernel headers"
   homepage: "https://www.kernel.org/"
   license: "GPL-2.0-only"
@@ -8,8 +8,8 @@ export const package = {
 
   sources: {
     main: {
-      url: "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.12.tar.xz"
-      sha256: "sha256:b1a2562be56e42afb3f8489d4c2a7ac472ac23098f1ef1c1e40da601f54625eb"
+      url: "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.12.93.tar.xz"
+      sha256: "sha256:492648a87c0b69c5ac7f43be64792b9000e3439550d4e82e4a14710c49094fa3"
     }
   }
 
@@ -22,7 +22,7 @@ export const package = {
 
 export def build [ctx] {
   let nproc = $ctx.nproc
-  let source_dir = ($ctx.sources.main.dir | path join "linux-6.12")
+  let source_dir = ($ctx.sources.main.dir | path join "linux-6.12.93")
   cd $source_dir
   make -j ($nproc) headers_install INSTALL_HDR_PATH=($ctx.package_dir)
 }

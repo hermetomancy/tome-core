@@ -1,13 +1,13 @@
 export const package = {
   name: "llvm"
-  version: "19.1.0"
+  version: "22.1.7"
   summary: "LLVM compiler infrastructure"
   homepage: "https://llvm.org/"
   license: "Apache-2.0 WITH LLVM-exception"
   sources: {
     main: {
-      url: "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.0/llvm-project-19.1.0.src.tar.xz"
-      sha256: "sha256:5042522b49945bc560ff9206f25fb87980a9b89b914193ca00d961511ff0673c"
+      url: "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.7/llvm-project-22.1.7.src.tar.xz"
+      sha256: "sha256:5cc4a3f12bba50b6bdfb4b61bdc852117a0ff2517807c3902fc13267fb93562e"
     }
   }
 
@@ -26,7 +26,7 @@ export const package = {
 # carved out post-build by clang.rn's `files` globs; lld stays in this package.
 export def build [ctx] {
   let nproc = $ctx.nproc
-  let source_dir = ($ctx.sources.main.dir | path join "llvm-project-19.1.0.src")
+  let source_dir = ($ctx.sources.main.dir | path join "llvm-project-22.1.7.src")
   cd $source_dir
   # LLVM_INSTALL_UTILS ships FileCheck/not/count with the install — rust's bootstrap
   # sanity-checks for FileCheck beside any external llvm-config it is pointed at.
