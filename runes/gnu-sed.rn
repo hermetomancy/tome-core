@@ -30,4 +30,8 @@ export def build [ctx] {
   ./configure --prefix=($ctx.prefix) --disable-nls --disable-dependency-tracking
   make -j ($ctx.nproc)
   make install DESTDIR=($ctx.package_dir)
+  # BSD-aware build scripts probe for `gsed` first (toybox's portability.sh does); ship
+  # the conventional alias beside the plain name — the gawk/awk pattern.
+  let bin = ($ctx.package_dir | path join ($ctx.prefix | str replace -r '^/' '') 'bin')
+  ^ln -s sed ($bin | path join 'gsed')
 }

@@ -28,4 +28,8 @@ export def build [ctx] {
   ./configure --prefix=($ctx.prefix) --disable-dependency-tracking
   make -j ($nproc)
   make install DESTDIR=($ctx.package_dir)
+  # BSD-aware build scripts probe for `gmake` first; ship the conventional alias beside
+  # the plain name — the gawk/awk pattern.
+  let bin = ($ctx.package_dir | path join ($ctx.prefix | str replace -r '^/' '') 'bin')
+  ^ln -s make ($bin | path join 'gmake')
 }
