@@ -54,10 +54,25 @@ export def build [ctx] {
     "macos-x86_64-darwin" => "x86_64"
     _ => ""
   }
+  # The host triple is declared, never guessed: LLVM's bundled config.guess is a 2011
+  # fossil whose Darwin branch asks `uname -p` and assumes *powerpc* when the answer is
+  # "unknown" — which is exactly what toybox's uname prints once the managed userland is
+  # on the build PATH. The symptom is a clang whose default target is the literal string
+  # "unknown" and a compiler-rt configure where every try-compile fails. (Bootstrap never
+  # hit it: llvm builds before toybox exists.) DEFAULT_TARGET_TRIPLE follows HOST_TRIPLE.
+  let host_triple = match $ctx.target {
+    "macos-aarch64-darwin" => "arm64-apple-darwin"
+    "macos-x86_64-darwin" => "x86_64-apple-darwin"
+    "linux-aarch64-musl" => "aarch64-unknown-linux-musl"
+    "linux-x86_64-musl" => "x86_64-unknown-linux-musl"
+    "linux-aarch64-gnu" => "aarch64-unknown-linux-gnu"
+    "linux-x86_64-gnu" => "x86_64-unknown-linux-gnu"
+    _ => (error make { msg: $"no LLVM host triple mapping for target ($ctx.target)" })
+  }
   if ($darwin_arch | is-empty) {
-    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
+    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
   } else {
-    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DDARWIN_osx_ARCHS=($darwin_arch) -DDARWIN_osx_BUILTIN_ARCHS=($darwin_arch) -DDARWIN_osx_SKIP_CC_KEXT=ON -DCMAKE_OSX_ARCHITECTURES=($darwin_arch) -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
+    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DDARWIN_osx_ARCHS=($darwin_arch) -DDARWIN_osx_BUILTIN_ARCHS=($darwin_arch) -DDARWIN_osx_SKIP_CC_KEXT=ON -DCMAKE_OSX_ARCHITECTURES=($darwin_arch) -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
   }
   cmake --build build --parallel ($nproc)
   cmake --install build --prefix ($ctx.package_dir)

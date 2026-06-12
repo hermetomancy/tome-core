@@ -65,5 +65,5 @@ the package host that `tome.rn` advertises, and sign the index
 
 The bootstrap leans on the host for exactly: a POSIX userland at `/usr/bin` + `/bin`
 (shadowed by toybox once built), a C compiler boundary (replaced by toolchain-wrappers
-once built), and on macOS the SDK and `/usr/bin/ld` (lld's Mach-O support is not yet a
-drop-in ld64 replacement — the one documented host-path exception).
+once built), and on macOS the SDK (located via `xcrun`). Linking is fully managed —
+ld64.lld on macOS, lld on Linux — so no host linker survives past bootstrap.
