@@ -69,10 +69,17 @@ export def build [ctx] {
     "linux-x86_64-gnu" => "x86_64-unknown-linux-gnu"
     _ => (error make { msg: $"no LLVM host triple mapping for target ($ctx.target)" })
   }
+  # The runtimes configure parses `ld -v` for a Darwin linker version unless
+  # CMAKE_LINKER matches .*lld.* (upstream's own lld escape hatch). Our wrapper is
+  # named plain `ld`, and ld64.lld's error banner regex-matches to the nonsense
+  # version "64." ("ld64.lld" → first digits), which then poisons every flag check
+  # as -mlinker-version=64.. Point the sub-builds at the freshly built ld64.lld by
+  # its lld-bearing path; configure-time only, nothing bakes into the payload.
+  let fresh_lld = ($source_dir | path join "build" "bin" "ld64.lld")
   if ($darwin_arch | is-empty) {
     cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
   } else {
-    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DDARWIN_osx_ARCHS=($darwin_arch) -DDARWIN_osx_BUILTIN_ARCHS=($darwin_arch) -DDARWIN_osx_SKIP_CC_KEXT=ON -DCMAKE_OSX_ARCHITECTURES=($darwin_arch) -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
+    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DDARWIN_osx_ARCHS=($darwin_arch) -DDARWIN_osx_BUILTIN_ARCHS=($darwin_arch) -DDARWIN_osx_SKIP_CC_KEXT=ON -DBUILTINS_CMAKE_ARGS=$"-DCMAKE_LINKER=($fresh_lld)" -DRUNTIMES_CMAKE_ARGS=$"-DCMAKE_LINKER=($fresh_lld)" -DCMAKE_OSX_ARCHITECTURES=($darwin_arch) -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
   }
   cmake --build build --parallel ($nproc)
   cmake --install build --prefix ($ctx.package_dir)
