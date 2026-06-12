@@ -14,20 +14,19 @@
 #   curl -sL https://codeload.github.com/grimoire-of-glass/grimoire/tar.gz/$COMMIT | shasum -a 256
 # then update COMMIT, the version date, and the sha256 below.
 
-# REPLACE before first build: the pinned commit and its tarball hash.
-const COMMIT = "58b0188a7b8b90251a96b14513355594ac7ec949"
+const COMMIT = "5a72a6f06c03328039dfdc22664aca3ee721e9be"
 
 export const package = {
   name: "grimoire"
-  version: "0.1.0-dev.20260612"
+  version: "0.1.0-dev.20260612.1"
   summary: "Grimoire itself: the grm package manager, built from source"
   homepage: "https://github.com/grimoire-of-glass/grimoire"
   license: "MIT"
 
   sources: {
     main: {
-      url: "https://codeload.github.com/grimoire-of-glass/grimoire/tar.gz/58b0188a7b8b90251a96b14513355594ac7ec949"
-      sha256: "sha256:b3be310e0ba5f15c5100b8c3e441a3f55efb6b5e93013c79e79c5d199e1daf45"
+      url: "https://codeload.github.com/grimoire-of-glass/grimoire/tar.gz/5a72a6f06c03328039dfdc22664aca3ee721e9be"
+      sha256: "sha256:baab60c3028e1050f5ada8de4f8a8c6ab8404b7d8ef19d20dc4e368163df3ee0"
     }
   }
 
