@@ -1,0 +1,33 @@
+export const package = {
+  name: "gnu-sed"
+  version: "4.9"
+  summary: "GNU sed, for hosts whose ambient sed is BSD"
+  homepage: "https://www.gnu.org/software/sed/"
+  license: "GPL-3.0-or-later"
+
+  # Build-dep fodder for packages whose build scripts use GNU sed syntax (toybox's
+  # genconfig uses `T` branches and GNU -E semantics). The macOS and FreeBSD ambient sed
+  # is BSD; declaring this package puts a managed GNU `sed` ahead of it on the build PATH
+  # — the managed answer, instead of leaking a host gsed. Linux hosts don't need it
+  # (ambient sed is GNU), hence the platform brackets at the declaring side.
+  sources: {
+    main: {
+      url: "https://ftp.gnu.org/gnu/sed/sed-4.9.tar.xz"
+      sha256: "sha256:6e226b732e1cd739464ad6862bd1a1aba42d7982922da7a53519631d24975181"
+    }
+  }
+
+  deps: {
+    build: { default: ["make"] }
+    runtime: []
+  }
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join "sed-4.9")
+  cd $source_dir
+  # --disable-nls keeps it off gettext, like hello; dependency tracking is one-shot waste.
+  ./configure --prefix=($ctx.prefix) --disable-nls --disable-dependency-tracking
+  make -j ($ctx.nproc)
+  make install DESTDIR=($ctx.package_dir)
+}
