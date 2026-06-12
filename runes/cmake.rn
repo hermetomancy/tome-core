@@ -23,7 +23,8 @@ export def build [ctx] {
   let nproc = $ctx.nproc
   let source_dir = ($ctx.sources.main.dir | path join "cmake-4.3.3")
   cd $source_dir
-  ./bootstrap --prefix=($ctx.prefix)
+  # Without --parallel, bootstrap compiles its temporary mini-cmake serially.
+  ./bootstrap --prefix=($ctx.prefix) --parallel=($nproc)
   make -j($nproc)
   make install DESTDIR=($ctx.package_dir)
 }
