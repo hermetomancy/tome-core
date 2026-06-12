@@ -22,8 +22,8 @@ The managed toolchain, in bootstrap order:
 - `toolchain-wrappers` — the managed compiler boundary: `cc`/`c++`/`ar`/`ld`/… wrapper
   scripts baking absolute store paths to clang and llvm (its runtime deps).
 - `toybox` — the managed POSIX userland that shadows the host's coreutils in builds.
-- `gsed` — GNU sed (bins `gsed` + `sed`), declared by builds that need GNU sed semantics
-  on BSD-userland hosts (macOS/FreeBSD), where it outranks the floor's BSD sed.
+- `gsed` — GNU sed (bins `gsed` + `sed`), declared unconditionally by any build that
+  needs GNU sed semantics — no host floor's sed flavor is assumable on any platform.
 - `musl`, `linux-headers` — Linux libc and kernel headers (Linux targets only).
 - `rust-stage0` — official rustc/cargo binaries, repackaged (fixed-output) to seed the
   `rust` source build; conflicts with `rust` for linked installs.
@@ -32,7 +32,9 @@ The managed toolchain, in bootstrap order:
   `build: ["build-env"]` to pull the whole managed toolchain instead of enumerating it.
 - `grimoire` — grimoire itself, pinned to a commit tarball; `grm upgrade grimoire` is
   self-update.
-- `hello` — GNU Hello, the package-authoring exemplar (build-dep on `build-env`).
+
+Userland software lives in the `world` tome — core is exactly what bootstraps grimoire
+and its managed build environment, nothing more.
 
 Naming follows the rule in
 [rune-authoring.md](https://github.com/grimoire-of-glass/grimoire/blob/main/docs/rune-authoring.md):

@@ -6,8 +6,9 @@ export const package = {
   license: "GPL-3.0-or-later"
 
   # GNU sed under its implementation name, shipping both command names (the gawk/awk
-  # pattern, rune-authoring.md "Naming rule"): `gsed` states GNU semantics explicitly
-  # (toybox's genconfig needs `T` branches and GNU -E), `sed` is the generic capability.
+  # pattern, rune-authoring.md "Naming rule"): `gsed` states GNU semantics explicitly,
+  # `sed` is the generic capability. Builds that need GNU semantics declare this package
+  # unconditionally — no host floor's sed flavor is assumable on any platform.
   # Declared build deps outrank the core floor on PATH, so a rune that declares gsed gets
   # GNU sed as plain `sed` for that build.
 
