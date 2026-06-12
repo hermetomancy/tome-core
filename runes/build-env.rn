@@ -15,6 +15,11 @@ export const package = {
   # Note: declaring build-env yields no useful `<DEP>_PREFIX` variables (it has no
   # contents of its own). A rune that needs a concrete prefix — `$env.LLVM_PREFIX`,
   # `$env.PYTHON3_PREFIX` — must declare that package directly, alongside build-env.
+  notes: [
+    "installed explicitly, build-env keeps the managed toolchain until `grm remove build-env`;"
+    "pulled in as a mere build dep it is cache, and `grm clean` reclaims it"
+  ]
+
   deps: {
     build: {}
     runtime: [
