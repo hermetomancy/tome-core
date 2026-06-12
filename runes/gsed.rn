@@ -1,0 +1,39 @@
+export const package = {
+  name: "gsed"
+  version: "4.9"
+  summary: "GNU sed, for hosts whose ambient sed is BSD"
+  homepage: "https://www.gnu.org/software/sed/"
+  license: "GPL-3.0-or-later"
+
+  # GNU sed under its implementation name, shipping both command names (the gawk/awk
+  # pattern, rune-authoring.md "Naming rule"): `gsed` states GNU semantics explicitly
+  # (toybox's genconfig needs `T` branches and GNU -E), `sed` is the generic capability.
+  # Declared build deps outrank the core floor on PATH, so a rune that declares gsed gets
+  # GNU sed as plain `sed` for that build.
+
+  # Supersedes the short-lived gnu-sed name.
+  replaces: ["gnu-sed"]
+  sources: {
+    main: {
+      url: "https://ftp.gnu.org/gnu/sed/sed-4.9.tar.xz"
+      sha256: "sha256:6e226b732e1cd739464ad6862bd1a1aba42d7982922da7a53519631d24975181"
+    }
+  }
+
+  deps: {
+    build: { default: ["gmake"] }
+    runtime: []
+  }
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join "sed-4.9")
+  cd $source_dir
+  # --disable-nls keeps it off gettext, like hello; dependency tracking is one-shot waste.
+  ./configure --prefix=($ctx.prefix) --disable-nls --disable-dependency-tracking
+  make -j ($ctx.nproc)
+  make install DESTDIR=($ctx.package_dir)
+  # Both names: `sed` from the install, `gsed` as the implementation alias.
+  let bin = ($ctx.package_dir | path join ($ctx.prefix | str replace -r '^/' '') 'bin')
+  ^ln -s sed ($bin | path join 'gsed')
+}

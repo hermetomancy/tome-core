@@ -14,7 +14,7 @@ export const package = {
   # cmake's default generator emits Makefiles (hence make), and LLVM's build requires a
   # Python interpreter. Both declared so a pure-managed (toybox-ambient) build works.
   deps: {
-    build: { default: ["cmake" "make" "python3"] }
+    build: { default: ["cmake" "gmake" "python3"] }
     runtime: []
   }
 

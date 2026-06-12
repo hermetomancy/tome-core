@@ -14,7 +14,7 @@ export const package = {
   }
 
   deps: {
-    build: { default: ["make"] }
+    build: { default: ["gmake"] }
     runtime: []
   }
 

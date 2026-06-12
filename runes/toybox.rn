@@ -11,11 +11,11 @@ export const package = {
     }
   }
 
-  # gnu-sed on the BSD-userland hosts: toybox's genconfig scripts use GNU sed syntax
-  # (`T` branches), and the ambient macOS/FreeBSD sed is BSD. The managed GNU sed lands
-  # ahead of it on the build PATH; toybox's own scripts/portability.sh picks plain `sed`.
+  # gsed on the BSD-userland hosts: toybox's genconfig scripts use GNU sed syntax
+  # (`T` branches), and the ambient macOS/FreeBSD sed is BSD. Declared deps outrank the
+  # core floor on PATH, and toybox's own scripts/portability.sh probes `gsed` explicitly.
   deps: {
-    build: { default: ["make" "gnu-sed[macos-*]" "gnu-sed[freebsd-*]"] }
+    build: { default: ["gmake" "gsed[macos-*]" "gsed[freebsd-*]"] }
     runtime: []
   }
 
