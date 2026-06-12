@@ -1,13 +1,14 @@
 export const package = {
   name: "python3"
-  version: "3.14.5"
+  version: "3.14.6"
   summary: "Python programming language"
   homepage: "https://www.python.org/"
   license: "PSF-2.0"
   sources: {
     main: {
-      url: "https://www.python.org/ftp/python/3.14.5/Python-3.14.5.tar.xz"
-      sha256: "sha256:7e32597b99e5d9a39abed35de4693fa169df3e5850d4c334337ffd6a19a36db6"
+      url: "https://www.python.org/ftp/python/3.14.6/Python-3.14.6.tar.xz"
+      # sha256 must be recomputed: sha256sum Python-3.14.6.tar.xz
+      sha256: "sha256:PLACEHOLDER"
     }
     musl_patch: {
       url: "https://git.alpinelinux.org/aports/plain/main/python3/musl-find_library.patch?h=3.21-stable"
@@ -24,7 +25,7 @@ export const package = {
 
 export def build [ctx] {
   let nproc = $ctx.nproc
-  let source_dir = ($ctx.sources.main.dir | path join "Python-3.14.5")
+  let source_dir = ($ctx.sources.main.dir | path join "Python-3.14.6")
   cd $source_dir
 
   # The find_library patch teaches ctypes musl's library naming; it is wrong for glibc,

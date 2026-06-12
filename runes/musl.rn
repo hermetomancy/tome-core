@@ -1,6 +1,6 @@
 export const package = {
   name: "musl"
-  version: "1.2.5"
+  version: "1.2.6"
   summary: "musl libc"
   homepage: "https://musl.libc.org/"
   license: "MIT"
@@ -8,8 +8,9 @@ export const package = {
 
   sources: {
     main: {
-      url: "https://musl.libc.org/releases/musl-1.2.5.tar.gz"
-      sha256: "sha256:a9a118bbe84d8764da0ea0d28b3ab3fae8477fc7e4085d90102b8596fc7c75e4"
+      url: "https://musl.libc.org/releases/musl-1.2.6.tar.gz"
+      # sha256 must be recomputed: sha256sum musl-1.2.6.tar.gz
+      sha256: "sha256:PLACEHOLDER"
     }
   }
 
@@ -22,7 +23,7 @@ export const package = {
 
 export def build [ctx] {
   let nproc = $ctx.nproc
-  let source_dir = ($ctx.sources.main.dir | path join "musl-1.2.5")
+  let source_dir = ($ctx.sources.main.dir | path join "musl-1.2.6")
   cd $source_dir
   ./configure --prefix=($ctx.prefix) --disable-shared
   make -j ($nproc)
