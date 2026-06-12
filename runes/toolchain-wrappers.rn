@@ -31,9 +31,14 @@ export def build [ctx] {
   # host path baked into the core tome; revisit when ld64.lld matures.
   let ld_target = if $is_macos { "/usr/bin/ld" } else { $"($env.LLVM_PREFIX)/bin/lld" }
 
+  # gcc/g++ are aliases for the managed clang: autotools probes the name `gcc` before
+  # `cc`, and without these the *host* gcc wins from the ambient PATH tail — exactly the
+  # unmanaged-compiler leak this package exists to close.
   let wrappers = {
     cc: $"($env.CLANG_PREFIX)/bin/clang"
     "c++": $"($env.CLANG_PREFIX)/bin/clang++"
+    gcc: $"($env.CLANG_PREFIX)/bin/clang"
+    "g++": $"($env.CLANG_PREFIX)/bin/clang++"
     ar: $"($env.LLVM_PREFIX)/bin/llvm-ar"
     as: $"($env.LLVM_PREFIX)/bin/llvm-as"
     ld: $ld_target
