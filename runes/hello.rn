@@ -11,8 +11,11 @@ export const package = {
     }
   }
 
+  # The exemplar for out-of-core source packages: depend on `build-env` for the whole
+  # managed toolchain (compiler boundary, cmake/make, python, toybox userland) instead of
+  # enumerating tools. Declare a package directly only when its `<DEP>_PREFIX` is needed.
   deps: {
-    build: { default: ["make"] }
+    build: { default: ["build-env"] }
     runtime: []
   }
 }
