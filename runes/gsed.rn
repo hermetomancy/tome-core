@@ -31,6 +31,8 @@ export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "sed-4.9")
   cd $source_dir
   # --disable-nls keeps it off gettext, like hello; dependency tracking is one-shot waste.
+  # drop autoconf's default -g so the temp build dir isn't baked into the binary (purity lint)
+  $env.CFLAGS = "-O2"
   ./configure --prefix=($ctx.prefix) --disable-nls --disable-dependency-tracking
   make -j ($ctx.nproc)
   make install DESTDIR=($ctx.package_dir)

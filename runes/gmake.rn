@@ -25,6 +25,8 @@ export def build [ctx] {
   let nproc = $ctx.nproc
   let source_dir = ($ctx.sources.main.dir | path join "make-4.4.1")
   cd $source_dir
+  # drop autoconf's default -g so the temp build dir isn't baked into the binary (purity lint)
+  $env.CFLAGS = "-O2"
   ./configure --prefix=($ctx.prefix) --disable-dependency-tracking
   make -j ($nproc)
   make install DESTDIR=($ctx.package_dir)
