@@ -24,6 +24,10 @@ The managed toolchain, in bootstrap order:
 - `toybox` — the managed POSIX userland that shadows the host's coreutils in builds.
 - `gsed` — GNU sed (bins `gsed` + `sed`), declared unconditionally by any build that
   needs GNU sed semantics — no host floor's sed flavor is assumable on any platform.
+- `openssl` — TLS/crypto library (libssl/libcrypto, static + shared). Lives in core because
+  `rust` links it **statically** into cargo (otherwise cargo's `openssl-sys` falls back to a
+  hardcoded Homebrew path on macOS); the `world` tome's curl/git/openssh link it shared,
+  cross-tome. TLS comes from here, never the host.
 - `musl`, `linux-headers` — Linux libc and kernel headers (Linux targets only).
 - `rust-stage0` — official rustc/cargo binaries, repackaged (fixed-output) to seed the
   `rust` source build; conflicts with `rust` for linked installs.

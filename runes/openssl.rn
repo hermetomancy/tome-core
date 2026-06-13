@@ -1,0 +1,50 @@
+export const package = {
+  name: "openssl"
+  version: "3.5.7"
+  summary: "Toolkit for TLS/SSL and general-purpose cryptography"
+  homepage: "https://openssl-library.org/"
+  license: "Apache-2.0"
+
+  sources: {
+    main: {
+      url: "https://github.com/openssl/openssl/releases/download/openssl-3.5.7/openssl-3.5.7.tar.gz"
+      sha256: "sha256:a8c0d28a529ca480f9f36cf5792e2cd21984552a3c8e4aa11a24aa31aeac98e8"
+    }
+  }
+
+  # libssl/libcrypto are linked shared by curl (baked store paths), so openssl is a build
+  # AND runtime dep of its consumers. openssl itself links only libc/pthreads — no managed
+  # library floor beyond that. zlib stays off: openssl's only use for it is the deprecated,
+  # insecure TLS record compression, which we never want.
+  deps: {
+    build: { default: ["gmake"] }
+    runtime: []
+  }
+
+  bins: {
+    default: { openssl: "bin/openssl" }
+  }
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join "openssl-3.5.7")
+  cd $source_dir
+  # ./config is a thin sh wrapper that execs `perl ./Configure`, which autodetects the
+  # target triple; perl rides in on the ambient host floor, the same documented stage-2 debt
+  # the autotools runes lean on. --libdir=lib pins the layout (openssl picks lib64 on some
+  # 64-bit Linux otherwise); openssldir stays inside the store prefix so the package is
+  # self-contained. no-docs skips the perl POD->man toolchain; no-tests drops the test
+  # programs we never run. Configure selects a release profile (-O3, no -g), so unlike the
+  # autoconf runes there is no build-dir path baked into debug info to strip.
+  #
+  # The darwin target hardcodes `ranlib -c` (Apple's flag to keep common symbols), but the
+  # managed toolchain's ranlib is llvm-ranlib, which rejects -c and fails at install time.
+  # Configure honors a RANLIB env override (RANLIB => env('RANLIB')), so point it at the
+  # plain managed ranlib — llvm-ar already writes an archive index, so dropping -c is safe.
+  $env.RANLIB = "ranlib"
+  ./config --prefix=($ctx.prefix) --libdir=lib --openssldir=($ctx.prefix | path join "ssl") no-docs no-tests
+  make -j ($ctx.nproc)
+  # install_sw = libraries, headers, and the openssl CLI; install_ssldirs = the openssldir
+  # with a default openssl.cnf. Together they skip install_docs (we built none).
+  make install_sw install_ssldirs DESTDIR=($ctx.package_dir)
+}
