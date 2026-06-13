@@ -51,8 +51,9 @@ export const package = {
   deps: {
     # rust-stage0 seeds the bootstrap; llvm provides llvm-config; python3 runs x.py; cmake
     # and make cover the native build scripts of vendored -sys crates. rustc's bootstrap
-    # accepts a bounded LLVM range for an external llvm-config: 1.96 needs >= 21.
-    build: { default: ["rust-stage0" { name: "llvm", version: ">=21" } "python3" "cmake" "gmake"] }
+    # accepts a bounded LLVM range for an external llvm-config: 1.96 needs >= 21. openssl is
+    # linked statically into cargo (see the build) so cargo carries no host openssl.
+    build: { default: ["rust-stage0" { name: "llvm", version: ">=21" } "python3" "cmake" "gmake" "openssl"] }
     # rustc invokes the system linker driver (`cc`) for every link; toolchain-wrappers is
     # what actually puts `cc` (delegating to the managed clang) on PATH.
     runtime: ["toolchain-wrappers"]
@@ -123,6 +124,14 @@ export def build [ctx] {
     $config = $config + $line + "\n"
   }
   $config | save --force bootstrap.toml
+
+  # cargo's openssl-sys otherwise falls back to a hardcoded Homebrew path on macOS
+  # (/opt/homebrew/opt/openssl@3), baking a host dylib into cargo that breaks the moment
+  # Homebrew's openssl moves. Point it at the managed openssl and link static, so cargo
+  # carries no external openssl. OPENSSL_DIR expects $dir/{include,lib}; OPENSSL_STATIC
+  # forces the .a over the .dylib (the env vars also cover cargo's curl-sys/libgit2-sys).
+  $env.OPENSSL_DIR = ($env.OPENSSL_PREFIX)
+  $env.OPENSSL_STATIC = "1"
 
   ^python3 x.py install --jobs ($ctx.nproc)
 
