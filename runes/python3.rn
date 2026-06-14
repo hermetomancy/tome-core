@@ -9,8 +9,12 @@ export const package = {
       url: "https://www.python.org/ftp/python/3.14.6/Python-3.14.6.tar.xz"
       sha256: "sha256:143b1dddefaec3bd2e21e3b839b34a2b7fb9842272883c576420d605e9f30c63"
     }
+    # aports' own cgit (git.alpinelinux.org) now sits behind a go-away anti-bot challenge that
+    # 403s any non-allowlisted User-Agent, and its `?h=3.21-stable` ref is a moving branch. Fetch
+    # the byte-identical patch from the GitHub aports mirror pinned to an immutable commit instead:
+    # reproducible, and reachable by a plain HTTP client.
     musl_patch: {
-      url: "https://git.alpinelinux.org/aports/plain/main/python3/musl-find_library.patch?h=3.21-stable"
+      url: "https://raw.githubusercontent.com/alpinelinux/aports/377830503560754191095d9594541a8625af8448/main/python3/musl-find_library.patch"
       sha256: "sha256:83fd071bc556d4e88373a35fde74cb9c464ee4b8e95e5583b55f2e36d4f33cf2"
       platform: "linux-*-musl"
     }
