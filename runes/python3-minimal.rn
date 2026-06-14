@@ -1,7 +1,7 @@
 export const package = {
-  name: "python3"
+  name: "python3-minimal"
   version: "3.14.6"
-  summary: "Python programming language"
+  summary: "Minimal Python interpreter for bootstrapping (drives rust's x.py and LLVM's build); the full interpreter ships as python3 in tome-world"
   homepage: "https://www.python.org/"
   license: "PSF-2.0"
   sources: {
@@ -36,9 +36,20 @@ export def build [ctx] {
   if ($ctx.target | str ends-with "-musl") {
     let patch_path = ($ctx.sources.musl_patch.path)
     patch -p1 -i $patch_path
+
+    # musl ships only a static libc in the store (no shared loader), so the interpreter links
+    # fully static — and a static binary cannot dlopen the stdlib extension modules CPython
+    # builds as shared `.so` by default. MODULE_BUILDTYPE=static (honoured by configure as
+    # `${MODULE_BUILDTYPE:-shared}`) compiles every available module into the interpreter
+    # instead; without it the static link silently drops `_posixsubprocess` and the rest,
+    # leaving a python that cannot even `import subprocess`. Modules whose external libs are
+    # absent (ssl, ctypes, sqlite, …) are skipped — this is the minimal build tool, not the
+    # full interpreter.
+    $env.MODULE_BUILDTYPE = "static"
   }
 
-  ./configure --prefix=($ctx.prefix) --without-ensurepip
+  # --disable-test-modules drops the test-only extensions a build tool never needs.
+  ./configure --prefix=($ctx.prefix) --without-ensurepip --disable-test-modules
   make -j($nproc)
   make install DESTDIR=($ctx.package_dir)
 }
