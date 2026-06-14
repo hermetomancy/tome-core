@@ -24,7 +24,17 @@ export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "cmake-4.3.3")
   cd $source_dir
   # Without --parallel, bootstrap compiles its temporary mini-cmake serially.
-  ./bootstrap --prefix=($ctx.prefix) --parallel=($nproc)
+  #
+  # -DCMAKE_USE_OPENSSL=OFF: on Linux the bootstrap builds the bundled curl (cmcurl),
+  # whose CMakeLists defaults CMAKE_USE_OPENSSL=ON and hard-fails when it cannot find
+  # OpenSSL on the host — exactly the host auto-detection the sandboxed build env forbids
+  # (AGENTS.md §5.3). cmake needs TLS only for `file(DOWNLOAD https)` / ctest submission,
+  # which the hermetic model never exercises (sources are declared by pinned hash and
+  # fetched by grimoire), so we take §5.3's "explicitly disabled" path rather than pulling
+  # openssl into cmake's runtime closure. macOS is unaffected: its bootstrap defaults to
+  # --system-curl (Secure Transport), so the bundled curl — and this flag — are never
+  # built. Everything after `--` is forwarded verbatim to the configure step.
+  ./bootstrap --prefix=($ctx.prefix) --parallel=($nproc) -- -DCMAKE_USE_OPENSSL=OFF
   make -j($nproc)
   make install DESTDIR=($ctx.package_dir)
 }
