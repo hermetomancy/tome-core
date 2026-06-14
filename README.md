@@ -15,7 +15,9 @@ The managed toolchain, in bootstrap order:
 
 - `gmake` — GNU make (bins `gmake` + `make`); the seed package, built first with the host
   compiler boundary.
-- `cmake`, `python3` — build drivers for the LLVM build.
+- `cmake`, `python3-minimal` — build drivers for the LLVM build (`python3-minimal` is a
+  static, stdlib-only interpreter that runs LLVM's and rust's build scripts; the full `python3`
+  ships in tome-world).
 - `llvm` — LLVM + lld, one monorepo build. `clang` is a **split member** carved from the
   same build by its `files` globs, with the compiler-rt runtimes installed inside clang's
   resource directory (`LLVM_ENABLE_RUNTIMES`).
