@@ -24,5 +24,15 @@ export def build [ctx] {
   let nproc = $ctx.nproc
   let source_dir = ($ctx.sources.main.dir | path join "linux-6.12.93")
   cd $source_dir
-  make -j ($nproc) headers_install INSTALL_HDR_PATH=($ctx.package_dir)
+  # `make headers_install` does its final copy with rsync (the kernel's cmd_headers_install),
+  # which the sandboxed build floor doesn't provide — toybox ships no rsync, and pulling it in
+  # would be a heavy dependency at the very bottom of the bootstrap. `make headers` runs the
+  # identical uapi header generation into ./usr/include without that rsync step. Copy the tree
+  # into the prefix ourselves, then drop the kernel's per-header `.cmd` build stamps so the
+  # package ships only headers — exactly what rsync's `--include='*.h' --exclude='*'` installs.
+  make -j ($nproc) headers
+  let include_dir = ($ctx.package_dir | path join "include")
+  mkdir $include_dir
+  ^cp -R usr/include/. $include_dir
+  ^find $include_dir -type f -not -name "*.h" -delete
 }
