@@ -1,6 +1,6 @@
 export const package = {
   name: "gsed"
-  version: "4.9"
+  version: "4.10"
   summary: "GNU sed, for hosts whose ambient sed is BSD"
   homepage: "https://www.gnu.org/software/sed/"
   license: "GPL-3.0-or-later"
@@ -16,8 +16,8 @@ export const package = {
   replaces: ["gnu-sed"]
   sources: {
     main: {
-      url: "https://ftp.gnu.org/gnu/sed/sed-4.9.tar.xz"
-      sha256: "sha256:6e226b732e1cd739464ad6862bd1a1aba42d7982922da7a53519631d24975181"
+      url: "https://ftp.gnu.org/gnu/sed/sed-4.10.tar.xz"
+      sha256: "sha256:b8e72182b2ec96a3574e2998c47b7aaa64cc20ce000d8e9ac313cc07cecf28c7"
     }
   }
 
@@ -28,7 +28,7 @@ export const package = {
 }
 
 export def build [ctx] {
-  let source_dir = ($ctx.sources.main.dir | path join "sed-4.9")
+  let source_dir = ($ctx.sources.main.dir | path join "sed-4.10")
   cd $source_dir
   # --disable-nls keeps it off gettext, like hello; dependency tracking is one-shot waste.
   # drop autoconf's default -g so the temp build dir isn't baked into the binary (purity lint)
