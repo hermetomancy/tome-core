@@ -30,7 +30,15 @@ export def build [ctx] {
   # identical uapi header generation into ./usr/include without that rsync step. Copy the tree
   # into the prefix ourselves, then drop the kernel's per-header `.cmd` build stamps so the
   # package ships only headers — exactly what rsync's `--include='*.h' --exclude='*'` installs.
-  make -j ($nproc) headers
+  #
+  # kbuild still compiles its host tools (fixdep, unifdef) before generating headers, with
+  # HOSTCC and KBUILD_HOSTLDFLAGS — neither of which the musl floor's CFLAGS/LDFLAGS reaches.
+  # At the managed boundary HOSTCC defaults to the musl-targeted managed clang, whose link then
+  # fails hunting gcc's crtbeginS.o/-lgcc (absent in the musl world). These host tools only run
+  # during this build and are never shipped (linux-headers carries only .h files), so build them
+  # with the host's native glibc compiler. A no-op at the host boundary, where `cc` is already
+  # `/usr/bin/cc`; the fix at the managed boundary, where it sidesteps the managed musl clang.
+  make -j ($nproc) HOSTCC="/usr/bin/cc" headers
   let include_dir = ($ctx.package_dir | path join "include")
   mkdir $include_dir
   ^cp -R usr/include/. $include_dir
