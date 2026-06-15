@@ -134,6 +134,11 @@ export def build [ctx] {
     ""
     "[llvm]"
     "download-ci-llvm = false"
+    # We link against the tome's prebuilt llvm via the external llvm-config below, so bootstrap
+    # never builds LLVM itself — but its [llvm] config still probes for ninja and aborts when it
+    # is absent from the managed build floor. ninja only matters when bootstrap builds LLVM, so
+    # turn it off to silence the probe (the external llvm-config path ignores it).
+    "ninja = false"
     ""
     $"[target.($rust_triple)]"
     $"llvm-config = \"($env.LLVM_PREFIX)/bin/llvm-config\""
