@@ -36,6 +36,7 @@ export const package = {
     "macos-aarch64-darwin"
     "macos-x86_64-darwin"
     "linux-x86_64-musl"
+    "linux-aarch64-musl"
     "linux-x86_64-gnu"
     "linux-aarch64-gnu"
     "freebsd-x86_64-unknown"

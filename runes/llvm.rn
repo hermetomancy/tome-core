@@ -36,16 +36,9 @@ export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "llvm-project-22.1.7.src")
   cd $source_dir
 
-  # Stage 2 of the musl toolchain: build LLVM itself against the managed musl libc++ (the host
-  # has no musl C++ stdlib). Point the C++ compile at libc++'s headers — `-nostdinc++` plus its
-  # include dir *before* the C headers — and the link at libc++ (abi folded in) and the LLVM
-  # unwinder. macOS uses the SDK's libc++ and needs none of this. The C flags grimoire already
-  # set stay as-is; only the C++/link flags gain the libc++ bits.
-  if ($ctx.target | str ends-with "-musl") {
-    let cxx = $env.LIBCXX_PREFIX
-    $env.CXXFLAGS = $"-stdlib=libc++ -nostdinc++ -isystem ($cxx)/include/c++/v1 ($env.CXXFLAGS)"
-    $env.LDFLAGS = $"($env.LDFLAGS) -L($cxx)/lib --unwindlib=libunwind"
-  }
+  # On musl, the C++ build needs the managed libc++ (the host has no musl C++ stdlib). The build
+  # env injects it automatically once `libcxx` is installed — which the `libcxx[linux-*-musl]`
+  # build dep guarantees is the case before this builds — so no per-rune flag wiring is needed.
 
   # LLVM_INSTALL_UTILS ships FileCheck/not/count with the install — rust's bootstrap
   # sanity-checks for FileCheck beside any external llvm-config it is pointed at.
