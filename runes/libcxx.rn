@@ -47,14 +47,11 @@ export def build [ctx] {
   # `check_library_exists` probe false-positives against the host glibc that leaks into configure
   # checks, which leaves consumers with an undefined reference. Forcing it off makes libc++abi use
   # its own thread-local-destructor registry.
-  # Compile with global-dynamic TLS so these static archives can be linked into a SHARED object.
-  # clang otherwise optimizes module-local `thread_local`s (libc++abi's eh_globals) to the local-exec
-  # model, whose R_AARCH64_TLSLE relocations ld rejects in a .so — which is exactly what rust's
-  # dynamic rustc does when it links libc++ into librustc_driver.so. Appended to the floor's musl
-  # flags; harmless for the static-executable consumers (a slightly less optimal TLS access).
-  $env.CFLAGS = $"($env.CFLAGS) -ftls-model=global-dynamic"
-  $env.CXXFLAGS = $"($env.CXXFLAGS) -ftls-model=global-dynamic"
-  cmake -S runtimes -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" -DLIBCXX_HAS_MUSL_LIBC=ON -DLIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL=OFF -DLIBCXX_ENABLE_SHARED=OFF -DLIBCXX_ENABLE_STATIC=ON -DLIBCXXABI_ENABLE_SHARED=OFF -DLIBCXXABI_ENABLE_STATIC=ON -DLIBUNWIND_ENABLE_SHARED=OFF -DLIBUNWIND_ENABLE_STATIC=ON -DLIBCXXABI_USE_LLVM_UNWINDER=ON -DLIBCXX_USE_COMPILER_RT=ON -DLIBCXXABI_USE_COMPILER_RT=ON -DLIBUNWIND_USE_COMPILER_RT=ON -DLIBCXX_CXX_ABI=libcxxabi -DLIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY=ON -DLIBCXX_INCLUDE_TESTS=OFF -DLIBCXXABI_INCLUDE_TESTS=OFF -DLIBUNWIND_INCLUDE_TESTS=OFF -DLIBCXX_INCLUDE_BENCHMARKS=OFF -DCMAKE_INSTALL_PREFIX=($ctx.prefix)
+  # CMAKE_POSITION_INDEPENDENT_CODE: rust's dynamic rustc links libc++ into librustc_driver.so, so
+  # these static archives must be -fPIC. Without it clang emits local-exec TLS for libc++abi's
+  # eh_globals (R_AARCH64_TLSLE), which ld rejects in a .so; -fPIC lowers it to .so-safe TLSDESC.
+  # Harmless for the static-executable consumers (a slightly less optimal TLS/data access).
+  cmake -S runtimes -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" -DLIBCXX_HAS_MUSL_LIBC=ON -DLIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL=OFF -DLIBCXX_ENABLE_SHARED=OFF -DLIBCXX_ENABLE_STATIC=ON -DLIBCXXABI_ENABLE_SHARED=OFF -DLIBCXXABI_ENABLE_STATIC=ON -DLIBUNWIND_ENABLE_SHARED=OFF -DLIBUNWIND_ENABLE_STATIC=ON -DLIBCXXABI_USE_LLVM_UNWINDER=ON -DLIBCXX_USE_COMPILER_RT=ON -DLIBCXXABI_USE_COMPILER_RT=ON -DLIBUNWIND_USE_COMPILER_RT=ON -DLIBCXX_CXX_ABI=libcxxabi -DLIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY=ON -DLIBCXX_INCLUDE_TESTS=OFF -DLIBCXXABI_INCLUDE_TESTS=OFF -DLIBUNWIND_INCLUDE_TESTS=OFF -DLIBCXX_INCLUDE_BENCHMARKS=OFF -DCMAKE_INSTALL_PREFIX=($ctx.prefix)
   cmake --build build --parallel ($nproc)
   cmake --install build --prefix ($ctx.package_dir)
 }
