@@ -52,6 +52,18 @@ export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join $"grimoire-($COMMIT)")
   cd $source_dir
 
+  # On musl, ship grm fully static. Unlike the rust toolchain it runs no proc-macros, so it needs
+  # no dynamic loader: +crt-static makes it self-contained. rustc drives the linker directly
+  # (bypassing CFLAGS), so a wrapper pins the musl sysroot/CRT/libc the managed clang needs.
+  if ($ctx.target | str ends-with "-musl") {
+    let musl = $env.MUSL_PREFIX
+    let lh = $env.LINUX_HEADERS_PREFIX
+    let wrap = ($source_dir | path join "grm-musl-linker")
+    $"#!/bin/sh\nexec cc \"$@\" --sysroot=($musl) -isystem ($musl)/include -isystem ($lh)/include -B($musl)/lib -L($musl)/lib --rtlib=compiler-rt --unwindlib=none\n" | save --force $wrap
+    ^chmod +x $wrap
+    $env.RUSTFLAGS = $"-C target-feature=+crt-static -C linker=($wrap)"
+  }
+
   # --locked: the lockfile inside the pinned tarball is the (transitively hashed) truth for
   # every crate; cargo verifies each download against it. Network use here is the documented
   # vendoring policy, not an accident.
