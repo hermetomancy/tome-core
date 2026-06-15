@@ -148,10 +148,14 @@ export def build [ctx] {
     $config = $config + $line + "\n"
   }
   # When cross-compiling, the build (gnu) triple also needs a stanza — build scripts and
-  # proc-macros are compiled for it and run on the build host. The managed clang produces static
-  # musl, which runs on the glibc host, so the same `cc` serves.
+  # proc-macros (e.g. rustc_macros, serde_derive) are compiled for it and run on the build host,
+  # dlopen'd into the *glibc* stage0 rustc. They must therefore be glibc artifacts: the managed
+  # clang defaults to musl (and a musl .so can't load into a glibc process), so this stanza uses
+  # the host's native glibc compiler at the FHS path `/usr/bin/cc`/`/usr/bin/c++`. These are
+  # ephemeral build-host helpers, not part of the shipped musl toolchain — every artifact that
+  # lands in the store is still produced by the managed musl clang via the musl stanza above.
   if $is_musl {
-    $config = $config + $"[target.($build_triple)]\ncc = \"cc\"\ncxx = \"c++\"\nlinker = \"cc\"\n\n"
+    $config = $config + $"[target.($build_triple)]\ncc = \"/usr/bin/cc\"\ncxx = \"/usr/bin/c++\"\nlinker = \"/usr/bin/cc\"\n\n"
   }
   $config | save --force bootstrap.toml
 
