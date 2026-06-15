@@ -4,7 +4,7 @@
 builds depend on instead of reaching for host tools. Add it with:
 
 ```sh
-grm tome add https://github.com/grimoire-of-glass/tome-core --ref main
+grm tome add https://github.com/hermetomancy/tome-core --ref main
 ```
 
 (`grm setup` adds it automatically when no tome is configured.)
@@ -43,7 +43,7 @@ Userland software lives in the `world` tome — core is exactly what bootstraps 
 and its managed build environment, nothing more.
 
 Naming follows the rule in
-[rune-authoring.md](https://github.com/grimoire-of-glass/grimoire/blob/main/docs/rune-authoring.md):
+[rune-authoring.md](https://github.com/hermetomancy/grimoire/blob/main/docs/rune-authoring.md):
 multi-implementation standard utilities are packaged under their implementation name
 (`gmake`, `gsed`) and ship both command names; the generic name is a capability.
 
