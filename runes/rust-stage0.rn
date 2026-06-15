@@ -5,19 +5,24 @@
 # bootstrap the `rust` package (built from source with these binaries as the stage0
 # compiler); depend on `rust`, not on this, for anything that just needs rustc/cargo.
 #
-# Targets are limited to triples Rust publishes host tools for (a `rust-<ver>-<triple>.tar.xz`
-# combined package with `rustc/` and `cargo/`, not just `rust-std-<ver>-…`).
+# The stage0 is a *host* tool: it runs on the build machine to compile `rust`. So it is keyed to
+# the build host's libc, not the package's target — a bootstrap compiler runs where the build runs.
+# For `linux-aarch64-musl` the seed is therefore the aarch64-**gnu** release: Rust's aarch64-musl
+# binaries are dynamically linked against `/lib/ld-musl-…` (absent on a glibc host), whereas the
+# gnu binaries use the host's own glibc loader and run natively. `rust.rn` then cross-builds the
+# musl toolchain from this gnu seed. (This bakes a glibc build host; a musl host would seed from the
+# musl release, or self-seed from a previously-built Grimoire rust — a host-detection follow-up.)
 #
 # To fill in a hash:  curl -sL https://static.rust-lang.org/dist/<tarball>.sha256
 
 const VERSION = "1.96.0"
 
-# Grimoire target triple -> Rust target triple.
+# Grimoire target triple -> Rust stage0 (host seed) triple.
 const RUST_TRIPLES = {
   "macos-aarch64-darwin": "aarch64-apple-darwin"
   "macos-x86_64-darwin": "x86_64-apple-darwin"
   "linux-x86_64-musl": "x86_64-unknown-linux-musl"
-  "linux-aarch64-musl": "aarch64-unknown-linux-musl"
+  "linux-aarch64-musl": "aarch64-unknown-linux-gnu"
   "linux-x86_64-gnu": "x86_64-unknown-linux-gnu"
   "linux-aarch64-gnu": "aarch64-unknown-linux-gnu"
   "freebsd-x86_64-unknown": "x86_64-unknown-freebsd"
@@ -59,8 +64,9 @@ export const package = {
       platform: "linux-x86_64-musl"
     }
     "linux-aarch64-musl": {
-      url: "https://static.rust-lang.org/dist/rust-1.96.0-aarch64-unknown-linux-musl.tar.xz"
-      sha256: "sha256:630541a6e08412c76062a7a10aba0f737044ecab4d16b7b338049da7db68c90c"
+      # The gnu seed (host-native on a glibc host) — see the RUST_TRIPLES note above.
+      url: "https://static.rust-lang.org/dist/rust-1.96.0-aarch64-unknown-linux-gnu.tar.xz"
+      sha256: "sha256:371eadcca97062219cbd8593628eb5d2802bc370515d085fedce1b56b2baed57"
       platform: "linux-aarch64-musl"
     }
     "linux-x86_64-gnu": {
