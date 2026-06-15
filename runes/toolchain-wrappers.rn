@@ -8,10 +8,12 @@ export const package = {
 
   # clang and llvm are runtime deps, not just build deps: the wrappers bake absolute store
   # paths to their binaries, so this package's content (and content address) depends on
-  # theirs — and GC must never reap them while the wrappers are installed.
+  # theirs — and GC must never reap them while the wrappers are installed. On linux-musl the
+  # compiler-driver wrappers also bake the musl sysroot (see build), so musl joins them: a
+  # runtime dep so GC keeps it, a build dep so MUSL_PREFIX resolves and it is built floor-first.
   deps: {
-    build: { default: ["clang" "llvm"] }
-    runtime: ["clang" "llvm"]
+    build: { default: ["clang" "llvm" "musl[linux-*-musl]"] }
+    runtime: ["clang" "llvm" "musl[linux-*-musl]"]
   }
 
 }
@@ -69,10 +71,22 @@ export def build [ctx] {
     $wrappers
   }
 
+  # On linux-musl, bake the musl sysroot into the compiler-driver wrappers (cc/c++/gcc/g++).
+  # clang already defaults to the musl triple, compiler-rt, and unwindlib=none, but carries no
+  # default sysroot — so a bare `cc` (e.g. rustc driving the linker, which bypasses the floor's
+  # CFLAGS/LDFLAGS) resolves headers and CRT/libc from the host's /usr, leaking glibc (a glibc
+  # proc-macro .so then fails to load under the musl rustc: `__register_atfork: symbol not found`).
+  # --sysroot points headers, CRT, and libc at the managed musl; -B finds its crt*.o. Placed before
+  # "$@" so an explicit caller --sysroot still wins. Only the drivers get it: --sysroot/-B are inert
+  # on the llvm-* tool wrappers. Empty on macOS (the SDKROOT floor handles the sysroot there).
+  let driver_flags = if $is_macos { "" } else { $" --sysroot=($env.MUSL_PREFIX) -B($env.MUSL_PREFIX)/lib" }
+  let drivers = ["cc" "c++" "gcc" "g++"]
+
   for key in ($wrappers | columns) {
     let wrapper_target = ($wrappers | get $key)
+    let flags = (if ($key in $drivers) { $driver_flags } else { "" })
     let wrapper_path = ($ctx.package_dir | path join "bin" $key)
-    $"#!/usr/bin/env sh\nexec '($wrapper_target)' \"$@\"\n" | save $wrapper_path
+    $"#!/usr/bin/env sh\nexec '($wrapper_target)'($flags) \"$@\"\n" | save $wrapper_path
     ^chmod +x $wrapper_path
   }
 }
