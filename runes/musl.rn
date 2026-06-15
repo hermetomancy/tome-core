@@ -47,4 +47,13 @@ export def build [ctx] {
   ./configure --prefix=($ctx.prefix) --syslibdir=($ctx.prefix | path join "lib")
   make -j ($nproc) $"LIBCC=($libcc)"
   make install DESTDIR=($ctx.package_dir) $"LIBCC=($libcc)"
+
+  # musl installs the loader `ld-musl-<arch>.so.1` as an ABSOLUTE symlink to $libdir/libc.so —
+  # i.e. the final store path. grm's packager rejects symlinks whose target escapes the staging
+  # root, which an absolute /grm/store path does. Rewrite it relative to its own directory
+  # (→ libc.so): staging- and store-path agnostic, and the kernel resolves an interpreter symlink
+  # relative to its directory the same way, so a dynamic musl binary's PT_INTERP still finds it.
+  let ldso = (^find ($ctx.package_dir) -name "ld-musl-*.so.1" | lines | first)
+  rm --force $ldso
+  ^ln -s libc.so $ldso
 }
