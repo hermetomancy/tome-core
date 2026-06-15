@@ -146,6 +146,10 @@ export def build [ctx] {
     "cxx = \"c++\""
     $"linker = \"($linker)\""
     "crt-static = false"
+    # Bootstrap's sanity check refuses to target musl without a musl-root: the prefix whose lib/
+    # holds musl's CRT (crt1.o/crti.o/crtn.o/Scrt1.o) and libc.a, which std's build links against.
+    # That is exactly the managed musl store prefix.
+    $"musl-root = \"($env.MUSL_PREFIX)\""
     ""
   ]
   # `str join` is outside the rune command subset; concatenate with core language only.
