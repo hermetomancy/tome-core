@@ -14,7 +14,7 @@ export const package = {
   # cmake's default generator emits Makefiles (hence make), and LLVM's build requires a
   # Python interpreter. Both declared so a pure-managed (toybox-ambient) build works.
   deps: {
-    build: { default: ["cmake" "gmake" "python3-minimal"] }
+    build: { default: ["cmake" "gmake" "python3-minimal" "libcxx[linux-*-musl]"] }
     runtime: []
   }
 
@@ -35,6 +35,17 @@ export def build [ctx] {
   let nproc = $ctx.nproc
   let source_dir = ($ctx.sources.main.dir | path join "llvm-project-22.1.7.src")
   cd $source_dir
+
+  # Stage 2 of the musl toolchain: build LLVM itself against the managed musl libc++ (the host
+  # has no musl C++ stdlib). Point the C++ compile at libc++'s headers — `-nostdinc++` plus its
+  # include dir *before* the C headers — and the link at libc++ (abi folded in) and the LLVM
+  # unwinder. macOS uses the SDK's libc++ and needs none of this. The C flags grimoire already
+  # set stay as-is; only the C++/link flags gain the libc++ bits.
+  if ($ctx.target | str ends-with "-musl") {
+    let cxx = $env.LIBCXX_PREFIX
+    $env.CXXFLAGS = $"-stdlib=libc++ -nostdinc++ -isystem ($cxx)/include/c++/v1 ($env.CXXFLAGS)"
+    $env.LDFLAGS = $"($env.LDFLAGS) -L($cxx)/lib --unwindlib=libunwind"
+  }
 
   # LLVM_INSTALL_UTILS ships FileCheck/not/count with the install — rust's bootstrap
   # sanity-checks for FileCheck beside any external llvm-config it is pointed at.
@@ -79,9 +90,9 @@ export def build [ctx] {
   # detections; nothing ever executes the value, and a clang without HOST_LINK_VERSION
   # simply omits the flag (the normal state on every non-Apple build).
   if ($darwin_arch | is-empty) {
-    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
+    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DCOMPILER_RT_BUILD_SANITIZERS=OFF -DCOMPILER_RT_BUILD_XRAY=OFF -DCOMPILER_RT_BUILD_LIBFUZZER=OFF -DCOMPILER_RT_BUILD_PROFILE=OFF -DCOMPILER_RT_BUILD_MEMPROF=OFF -DCOMPILER_RT_BUILD_ORC=OFF -DCOMPILER_RT_BUILD_GWP_ASAN=OFF -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_ENABLE_PIC=OFF -DLLVM_INSTALL_UTILS=ON
   } else {
-    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DDARWIN_osx_ARCHS=($darwin_arch) -DDARWIN_osx_BUILTIN_ARCHS=($darwin_arch) -DDARWIN_osx_SKIP_CC_KEXT=ON -DCMAKE_LINKER=ld64.lld -DBUILTINS_CMAKE_ARGS=-DCMAKE_LINKER=ld64.lld -DRUNTIMES_CMAKE_ARGS=-DCMAKE_LINKER=ld64.lld -DCMAKE_OSX_ARCHITECTURES=($darwin_arch) -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INSTALL_UTILS=ON
+    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DDARWIN_osx_ARCHS=($darwin_arch) -DDARWIN_osx_BUILTIN_ARCHS=($darwin_arch) -DDARWIN_osx_SKIP_CC_KEXT=ON -DCMAKE_LINKER=ld64.lld -DBUILTINS_CMAKE_ARGS=-DCMAKE_LINKER=ld64.lld -DRUNTIMES_CMAKE_ARGS=-DCMAKE_LINKER=ld64.lld -DCMAKE_OSX_ARCHITECTURES=($darwin_arch) -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INSTALL_UTILS=ON
   }
   cmake --build build --parallel ($nproc)
   cmake --install build --prefix ($ctx.package_dir)
