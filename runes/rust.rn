@@ -95,8 +95,9 @@ export def build [ctx] {
   if $is_musl {
     let musl = $env.MUSL_PREFIX
     let lh = $env.LINUX_HEADERS_PREFIX
-    let arch = ($ctx.target | split row "-" | get 1)
-    let loader = $"($musl)/lib/ld-musl-($arch).so.1"
+    # Locate the in-store musl loader by glob (the rune command subset has no `split` to pull the
+    # arch out of the target triple); musl ships exactly one `ld-musl-<arch>.so.1` in its lib dir.
+    let loader = (^find ($musl | path join "lib") -name "ld-musl-*.so.1" | lines | first)
     let wrap = ($source_dir | path join "grm-musl-linker")
     $"#!/bin/sh\nexec cc \"$@\" --sysroot=($musl) -isystem ($musl)/include -isystem ($lh)/include -B($musl)/lib -L($musl)/lib --rtlib=compiler-rt --unwindlib=none -Wl,--dynamic-linker=($loader)\n" | save --force $wrap
     ^chmod +x $wrap
@@ -166,6 +167,32 @@ export def build [ctx] {
   # forces the .a over the .dylib (the env vars also cover cargo's curl-sys/libgit2-sys).
   $env.OPENSSL_DIR = ($env.OPENSSL_PREFIX)
   $env.OPENSSL_STATIC = "1"
+
+  # Neutralize the musl floor's GENERIC CFLAGS/CXXFLAGS (--target=<musl> --sysroot=<musl> -isystem …,
+  # plus the libc++ -stdlib/-nostdinc++ on CXX) for the gnu BUILD triple only. The floor exports them
+  # unsuffixed for the whole build; the musl host=target cc-rs compiles need them for header
+  # resolution (the grm-musl-linker wrapper only acts at link time), but the build (gnu) triple's
+  # build scripts and proc-macros are compiled by the host glibc /usr/bin/cc and dlopen'd into the
+  # glibc stage0 — handing them --target=musl/--sysroot=musl/-static would break them. cc-rs reads
+  # CFLAGS_<triple> (dashed, then underscored) before the generic CFLAGS, so a clean per-triple value
+  # shadows the leak for the gnu triple while the musl triple keeps the generic flags. bootstrap.toml
+  # has no cflags key, so env is the only channel, and the rune subset has no dynamic env keys — set
+  # the literal names for both supported musl hosts' gnu build triples (only the active one is read);
+  # a non-empty value (-O2) guarantees cc-rs honours it over the generic fallback.
+  if $is_musl {
+    $env."CC_aarch64-unknown-linux-gnu" = "/usr/bin/cc"
+    $env."CXX_aarch64-unknown-linux-gnu" = "/usr/bin/c++"
+    $env."CFLAGS_aarch64-unknown-linux-gnu" = "-O2"
+    $env."CXXFLAGS_aarch64-unknown-linux-gnu" = "-O2"
+    $env."CFLAGS_aarch64_unknown_linux_gnu" = "-O2"
+    $env."CXXFLAGS_aarch64_unknown_linux_gnu" = "-O2"
+    $env."CC_x86_64-unknown-linux-gnu" = "/usr/bin/cc"
+    $env."CXX_x86_64-unknown-linux-gnu" = "/usr/bin/c++"
+    $env."CFLAGS_x86_64-unknown-linux-gnu" = "-O2"
+    $env."CXXFLAGS_x86_64-unknown-linux-gnu" = "-O2"
+    $env."CFLAGS_x86_64_unknown_linux_gnu" = "-O2"
+    $env."CXXFLAGS_x86_64_unknown_linux_gnu" = "-O2"
+  }
 
   ^python3 x.py install --jobs ($ctx.nproc)
 
