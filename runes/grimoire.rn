@@ -48,27 +48,51 @@ export const package = {
   ]
 }
 
+# Grimoire target triple -> Rust target triple, for the musl `--target` split (see build).
+const RUST_TRIPLE = {
+  "linux-aarch64-musl": "aarch64-unknown-linux-musl"
+  "linux-x86_64-musl": "x86_64-unknown-linux-musl"
+}
+
 export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join $"grimoire-($COMMIT)")
   cd $source_dir
 
-  # On musl, ship grm fully static. Unlike the rust toolchain it runs no proc-macros, so it needs
-  # no dynamic loader: +crt-static makes it self-contained. rustc drives the linker directly
-  # (bypassing CFLAGS), so a wrapper pins the musl sysroot/CRT/libc the managed clang needs.
   if ($ctx.target | str ends-with "-musl") {
+    # Ship grm fully static (+crt-static) so the product needs no dynamic loader. But grm's BUILD
+    # is not proc-macro-free: clap/serde derive macros are dynamic libraries rustc dlopens, and a
+    # +crt-static target-feature applied to them breaks that link. So scope +crt-static to the
+    # TARGET unit kind: pass --target so cargo compiles proc-macros and build scripts as HOST units
+    # (built from $env.RUSTFLAGS, without +crt-static) and only the grm binary as a TARGET unit.
+    # CARGO_TARGET_<triple>_RUSTFLAGS applies to target units only and *replaces* (not augments)
+    # RUSTFLAGS there, so fold the harness value (the --remap-path-prefix that keeps grm
+    # reproducible) into both. rustc drives the linker directly (bypassing CFLAGS), so the wrapper
+    # pins the musl sysroot/CRT/libc the managed clang needs; --dynamic-linker points any dynamic
+    # host build-script executable at the in-store loader so it runs on the host (the static grm
+    # itself has no PT_INTERP and ignores it). The env key can't be built dynamically in the rune
+    # subset, so set the literal names for both supported musl targets; only the active one is read.
     let musl = $env.MUSL_PREFIX
     let lh = $env.LINUX_HEADERS_PREFIX
+    let triple = ($RUST_TRIPLE | get ($ctx.target))
+    let loader = (^find ($musl | path join "lib") -name "ld-musl-*.so.1" | lines | first)
     let wrap = ($source_dir | path join "grm-musl-linker")
-    $"#!/bin/sh\nexec cc \"$@\" --sysroot=($musl) -isystem ($musl)/include -isystem ($lh)/include -B($musl)/lib -L($musl)/lib --rtlib=compiler-rt --unwindlib=none\n" | save --force $wrap
+    $"#!/bin/sh\nexec cc \"$@\" --sysroot=($musl) -isystem ($musl)/include -isystem ($lh)/include -B($musl)/lib -L($musl)/lib --rtlib=compiler-rt --unwindlib=none -Wl,--dynamic-linker=($loader)\n" | save --force $wrap
     ^chmod +x $wrap
-    $env.RUSTFLAGS = $"-C target-feature=+crt-static -C linker=($wrap)"
+    let host_flags = $"($env.RUSTFLAGS) -C linker=($wrap)"
+    $env.RUSTFLAGS = $host_flags
+    let target_flags = $"($host_flags) -C target-feature=+crt-static"
+    $env."CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS" = $target_flags
+    $env."CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS" = $target_flags
+
+    # --locked: the lockfile inside the pinned tarball is the (transitively hashed) truth for every
+    # crate; cargo verifies each download against it. Network use here is the documented vendoring
+    # policy, not an accident.
+    ^cargo build --release --locked --target $triple --jobs ($ctx.nproc)
+    mkdir ($ctx.package_dir | path join "bin")
+    ^cp $"target/($triple)/release/grm" ($ctx.package_dir | path join "bin" "grm")
+  } else {
+    ^cargo build --release --locked --jobs ($ctx.nproc)
+    mkdir ($ctx.package_dir | path join "bin")
+    ^cp target/release/grm ($ctx.package_dir | path join "bin" "grm")
   }
-
-  # --locked: the lockfile inside the pinned tarball is the (transitively hashed) truth for
-  # every crate; cargo verifies each download against it. Network use here is the documented
-  # vendoring policy, not an accident.
-  ^cargo build --release --locked --jobs ($ctx.nproc)
-
-  mkdir ($ctx.package_dir | path join "bin")
-  ^cp target/release/grm ($ctx.package_dir | path join "bin" "grm")
 }
