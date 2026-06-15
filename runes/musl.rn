@@ -24,7 +24,13 @@ export def build [ctx] {
   let nproc = $ctx.nproc
   let source_dir = ($ctx.sources.main.dir | path join "musl-1.2.6")
   cd $source_dir
-  ./configure --prefix=($ctx.prefix) --disable-shared
+  # Build the shared libc too — it is also musl's dynamic loader (`ld-musl-<arch>.so.1` is a
+  # symlink to `libc.so`). Everything Grimoire compiles links static, so this is unused by the
+  # toolchain; it exists so a *dynamically* linked musl binary can run — specifically the rust
+  # toolchain, whose `rustc` must `dlopen` proc-macros and so cannot be fully static. `--syslibdir`
+  # keeps the loader inside the store prefix instead of musl's default `/lib`, so a consumer points
+  # its `PT_INTERP` at the store path and no host directory is touched.
+  ./configure --prefix=($ctx.prefix) --syslibdir=($ctx.prefix | path join "lib")
   make -j ($nproc)
   make install DESTDIR=($ctx.package_dir)
 }
