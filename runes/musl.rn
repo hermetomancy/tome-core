@@ -33,12 +33,18 @@ export def build [ctx] {
   #
   # The musl floor's LDFLAGS carry `-static` (the toolchain links everything static). That is
   # wrong for building libc.so itself — clang rejects `-static -shared` together — so clear the
-  # inherited LDFLAGS; musl's own build rules supply what libc.a and libc.so each need. libc.so
-  # is linked `-nostdlib`, so it pulls no compiler runtime and wants none of the floor's
-  # --rtlib/--unwindlib either. (musl builds freestanding against its own headers, so the floor's
-  # CFLAGS are harmless and left in place; the managed clang already defaults to the musl triple.)
+  # inherited LDFLAGS; musl's own build rules supply what each of libc.a and libc.so needs.
+  # (musl builds freestanding against its own headers, so the floor's CFLAGS are harmless and
+  # left in place; the managed clang already defaults to the musl triple.)
   $env.LDFLAGS = ""
+  # libc.so is linked `-nostdlib` and musl appends its detected compiler runtime ($LIBCC) by
+  # hand for the long-double soft-float helpers its math pulls (__letf2/__getf2/__addtf3, used by
+  # lrintl/exp2l/__tanl/…). musl's auto-detection probes for libgcc, which the musl world has
+  # not, so it leaves LIBCC empty and the link fails with undefined soft-float symbols. (Because
+  # the link is -nostdlib, a `--rtlib=compiler-rt` LDFLAG would be ignored — only the explicit
+  # LIBCC is honoured.) Pin LIBCC to the managed clang's compiler-rt builtins archive.
+  let libcc = (^cc --rtlib=compiler-rt -print-libgcc-file-name | str trim)
   ./configure --prefix=($ctx.prefix) --syslibdir=($ctx.prefix | path join "lib")
-  make -j ($nproc)
-  make install DESTDIR=($ctx.package_dir)
+  make -j ($nproc) $"LIBCC=($libcc)"
+  make install DESTDIR=($ctx.package_dir) $"LIBCC=($libcc)"
 }
