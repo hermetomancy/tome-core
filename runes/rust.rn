@@ -204,6 +204,17 @@ export def build [ctx] {
     $env.CFLAGS = ""
     $env.CXXFLAGS = ""
     $env.LDFLAGS = ""
+    # The floor ALSO injects musl on the generic discovery vars (build_dep_env_vars): CPATH adds
+    # <musl>/include and <linux-headers>/include to EVERY compile, LIBRARY_PATH/CMAKE_LIBRARY_PATH
+    # add <musl>/lib. For the gnu build-host compiles that breaks glibc/libstdc++ — clang-19 pulls
+    # musl's <features.h> via CPATH, so llvm's cmake libstdc++ probe fails ("version must be at least
+    # 7.4"). Clear them; the musl-target compiles get their includes from CFLAGS_<musl-triple> above
+    # and their libs from the grm-musl-linker wrapper, so the musl side does not depend on them.
+    $env.CPATH = ""
+    $env.C_INCLUDE_PATH = ""
+    $env.CPLUS_INCLUDE_PATH = ""
+    $env.LIBRARY_PATH = ""
+    $env.CMAKE_LIBRARY_PATH = ""
     $env."CC_aarch64-unknown-linux-gnu" = "/usr/bin/cc"
     $env."CXX_aarch64-unknown-linux-gnu" = "/usr/bin/c++"
     $env."CC_x86_64-unknown-linux-gnu" = "/usr/bin/cc"
