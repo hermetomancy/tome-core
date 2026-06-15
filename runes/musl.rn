@@ -30,6 +30,14 @@ export def build [ctx] {
   # toolchain, whose `rustc` must `dlopen` proc-macros and so cannot be fully static. `--syslibdir`
   # keeps the loader inside the store prefix instead of musl's default `/lib`, so a consumer points
   # its `PT_INTERP` at the store path and no host directory is touched.
+  #
+  # The musl floor's LDFLAGS carry `-static` (the toolchain links everything static). That is
+  # wrong for building libc.so itself — clang rejects `-static -shared` together — so clear the
+  # inherited LDFLAGS; musl's own build rules supply what libc.a and libc.so each need. libc.so
+  # is linked `-nostdlib`, so it pulls no compiler runtime and wants none of the floor's
+  # --rtlib/--unwindlib either. (musl builds freestanding against its own headers, so the floor's
+  # CFLAGS are harmless and left in place; the managed clang already defaults to the musl triple.)
+  $env.LDFLAGS = ""
   ./configure --prefix=($ctx.prefix) --syslibdir=($ctx.prefix | path join "lib")
   make -j ($nproc)
   make install DESTDIR=($ctx.package_dir)
