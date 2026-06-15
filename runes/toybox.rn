@@ -33,6 +33,15 @@ export def build [ctx] {
     "defconfig"
   }
   cd $source_dir
+  # On musl, build toybox's build-time host tools (kconfig/config2help, compiled and *run* during
+  # the build) as STATIC. toybox compiles them with $HOSTCC, which bypasses the floor's LDFLAGS, so
+  # by default they come out dynamic musl with PT_INTERP=/lib/ld-musl-<arch>.so.1 — absent in the
+  # store-loader-only world — and fail to execute ("cannot execute: required file not found"). Route
+  # the floor's link flags through HOSTCC: --sysroot/-B supply musl's CRT, -static makes the tool
+  # self-contained so it runs on the build host with no loader. (compiler-rt is the clang default now.)
+  if ($ctx.target | str ends-with "-musl") {
+    $env.HOSTCC = $"cc --sysroot=($env.MUSL_PREFIX) -B($env.MUSL_PREFIX)/lib -static"
+  }
   make $config
   $env.PREFIX = ($ctx.package_dir)
   make -j ($nproc) install
