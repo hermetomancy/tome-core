@@ -84,12 +84,19 @@ export def build [ctx] {
   # simply omits the flag (the normal state on every non-Apple build).
   # PIC on Linux: rust's dynamic rustc links these static LLVM libs into librustc_driver.so, and
   # non-PIC objects (R_AARCH64_ABS64 in .text) cannot go in a shared object. PIC=ON would normally
-  # let cmake build the shared libLLVM/libclang-cpp dylibs too — which fail to link in the static
-  # musl world (the original reason this was PIC=OFF) — so every dylib target is explicitly disabled,
-  # leaving PIC *static* archives only. A static clang links PIC archives fine, so the toolchain is
-  # unaffected; only the archives' relocations change. (compiler-rt builtins build PIC too, harmless.)
+  # let cmake build the shared libLLVM/libclang-cpp dylibs and the clang analyzer plugin .so's too —
+  # which fail to link in the static musl world (the original reason this was PIC=OFF) — so every
+  # dylib target AND plugin support are explicitly disabled, leaving PIC *static* archives only.
+  # A static clang links PIC archives fine, so the toolchain is unaffected; only relocations change.
+  #
+  # global-dynamic TLS: even PIC, clang lowers module-local `thread_local`s (LLVM's PrettyStackTrace
+  # /TimeTraceProfiler, libc++abi's eh_globals) to the local-exec model, whose R_AARCH64_TLSLE
+  # relocations ld rejects in a .so. Forcing global-dynamic makes those archives linkable into
+  # librustc_driver.so. Linux only — macOS is Mach-O (PIC by default, no ELF TLS-model issue).
   if ($darwin_arch | is-empty) {
-    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DCOMPILER_RT_BUILD_SANITIZERS=OFF -DCOMPILER_RT_BUILD_XRAY=OFF -DCOMPILER_RT_BUILD_LIBFUZZER=OFF -DCOMPILER_RT_BUILD_PROFILE=OFF -DCOMPILER_RT_BUILD_MEMPROF=OFF -DCOMPILER_RT_BUILD_ORC=OFF -DCOMPILER_RT_BUILD_GWP_ASAN=OFF -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_ENABLE_PIC=ON -DBUILD_SHARED_LIBS=OFF -DLLVM_BUILD_LLVM_DYLIB=OFF -DLLVM_LINK_LLVM_DYLIB=OFF -DLLVM_BUILD_LLVM_C_DYLIB=OFF -DCLANG_LINK_CLANG_DYLIB=OFF -DLLVM_INSTALL_UTILS=ON
+    $env.CFLAGS = $"($env.CFLAGS) -ftls-model=global-dynamic"
+    $env.CXXFLAGS = $"($env.CXXFLAGS) -ftls-model=global-dynamic"
+    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DCOMPILER_RT_BUILD_SANITIZERS=OFF -DCOMPILER_RT_BUILD_XRAY=OFF -DCOMPILER_RT_BUILD_LIBFUZZER=OFF -DCOMPILER_RT_BUILD_PROFILE=OFF -DCOMPILER_RT_BUILD_MEMPROF=OFF -DCOMPILER_RT_BUILD_ORC=OFF -DCOMPILER_RT_BUILD_GWP_ASAN=OFF -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_ENABLE_PIC=ON -DBUILD_SHARED_LIBS=OFF -DLLVM_BUILD_LLVM_DYLIB=OFF -DLLVM_LINK_LLVM_DYLIB=OFF -DLLVM_BUILD_LLVM_C_DYLIB=OFF -DCLANG_LINK_CLANG_DYLIB=OFF -DLLVM_ENABLE_PLUGINS=OFF -DLLVM_INSTALL_UTILS=ON
   } else {
     cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DDARWIN_osx_ARCHS=($darwin_arch) -DDARWIN_osx_BUILTIN_ARCHS=($darwin_arch) -DDARWIN_osx_SKIP_CC_KEXT=ON -DCMAKE_LINKER=ld64.lld -DBUILTINS_CMAKE_ARGS=-DCMAKE_LINKER=ld64.lld -DRUNTIMES_CMAKE_ARGS=-DCMAKE_LINKER=ld64.lld -DCMAKE_OSX_ARCHITECTURES=($darwin_arch) -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INSTALL_UTILS=ON
   }
