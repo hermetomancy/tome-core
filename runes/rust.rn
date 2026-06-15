@@ -151,15 +151,6 @@ export def build [ctx] {
     "cxx = \"c++\""
     $"linker = \"($linker)\""
     "crt-static = false"
-    # Bootstrap's sanity check refuses to target musl without a musl-root: the prefix whose lib/
-    # holds musl's CRT (crt1.o/crti.o/crtn.o/Scrt1.o) and libc.a, which std's build links against.
-    # That is exactly the managed musl store prefix.
-    $"musl-root = \"($env.MUSL_PREFIX)\""
-    # rust's `unwind` crate links GCC's shared unwinder (-lgcc_s) by default on musl, which the
-    # managed compiler-rt/libunwind world does not provide (libstd.so link: "unable to find library
-    # -lgcc_s"). Build LLVM's libunwind from the vendored llvm-project source and link it statically
-    # into std instead — consistent with the wrapper's --rtlib=compiler-rt --unwindlib=none.
-    "llvm-libunwind = \"in-tree\""
     ""
   ]
   # `str join` is outside the rune command subset; concatenate with core language only.
@@ -167,14 +158,22 @@ export def build [ctx] {
   for line in $config_lines {
     $config = $config + $line + "\n"
   }
-  # When cross-compiling, the build (gnu) triple also needs a stanza — build scripts and
-  # proc-macros (e.g. rustc_macros, serde_derive) are compiled for it and run on the build host,
-  # dlopen'd into the *glibc* stage0 rustc. They must therefore be glibc artifacts: the managed
-  # clang defaults to musl (and a musl .so can't load into a glibc process), so this stanza uses
-  # the host's native glibc compiler at the FHS path `/usr/bin/cc`/`/usr/bin/c++`. These are
-  # ephemeral build-host helpers, not part of the shipped musl toolchain — every artifact that
-  # lands in the store is still produced by the managed musl clang via the musl stanza above.
+  # musl-only additions. Kept out of config_lines (which is emitted for every target) so a macOS
+  # build — where MUSL_PREFIX is unset and the darwin target uses the system unwinder — never
+  # references them. The two `[target.<rust_triple>]` keys are appended first and stay inside that
+  # table (a blank line does not close a TOML table); the build (gnu) triple stanza follows.
   if $is_musl {
+    # musl-root: bootstrap's sanity check refuses to target musl without the prefix whose lib/ holds
+    # musl's CRT (crt1.o/crti.o/crtn.o/Scrt1.o) and libc.a that std links. llvm-libunwind = in-tree:
+    # rust's unwind crate links GCC's -lgcc_s on musl by default, absent in the managed
+    # compiler-rt/libunwind world; build llvm's libunwind from the vendored source and link it
+    # statically instead (consistent with the wrapper's --rtlib=compiler-rt --unwindlib=none).
+    $config = $config + $"musl-root = \"($env.MUSL_PREFIX)\"\nllvm-libunwind = \"in-tree\"\n\n"
+    # The build (gnu) triple also needs a stanza — build scripts and proc-macros (rustc_macros,
+    # serde_derive) are compiled for it and run on the build host, dlopen'd into the *glibc* stage0.
+    # They must be glibc artifacts: the managed clang defaults to musl (a musl .so can't load into a
+    # glibc process), so use the host's native glibc /usr/bin/cc. Ephemeral build-host helpers — every
+    # artifact that lands in the store is still produced by the managed musl clang via the stanza above.
     $config = $config + $"[target.($build_triple)]\ncc = \"/usr/bin/cc\"\ncxx = \"/usr/bin/c++\"\nlinker = \"/usr/bin/cc\"\n\n"
   }
   $config | save --force bootstrap.toml
