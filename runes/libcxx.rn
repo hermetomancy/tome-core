@@ -17,7 +17,12 @@ export const package = {
   }
 
   deps: {
-    build: { default: ["cmake" "gmake"] }
+    # musl + linux-headers are the floor libcxx cross-compiles against (it IS the musl C++ stdlib —
+    # libc++abi's headers pull musl's <bits/alltypes.h>). They are normally injected as an ambient
+    # env floor, but that only applies once they are *installed*; declaring them here forces them
+    # built before libcxx, so a from-scratch `grm install` orders the floor ahead of its first
+    # consumer instead of relying on incremental build order.
+    build: { default: ["cmake" "gmake" "musl[linux-*-musl]" "linux-headers[linux]"] }
     runtime: []
   }
 }
