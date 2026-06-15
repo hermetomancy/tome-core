@@ -150,6 +150,11 @@ export def build [ctx] {
     # holds musl's CRT (crt1.o/crti.o/crtn.o/Scrt1.o) and libc.a, which std's build links against.
     # That is exactly the managed musl store prefix.
     $"musl-root = \"($env.MUSL_PREFIX)\""
+    # rust's `unwind` crate links GCC's shared unwinder (-lgcc_s) by default on musl, which the
+    # managed compiler-rt/libunwind world does not provide (libstd.so link: "unable to find library
+    # -lgcc_s"). Build LLVM's libunwind from the vendored llvm-project source and link it statically
+    # into std instead — consistent with the wrapper's --rtlib=compiler-rt --unwindlib=none.
+    "llvm-libunwind = \"in-tree\""
     ""
   ]
   # `str join` is outside the rune command subset; concatenate with core language only.
