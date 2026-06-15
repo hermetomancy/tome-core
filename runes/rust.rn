@@ -54,7 +54,10 @@ export const package = {
     # and make cover the native build scripts of vendored -sys crates. rustc's bootstrap
     # accepts a bounded LLVM range for an external llvm-config: 1.96 needs >= 21. openssl is
     # linked statically into cargo (see the build) so cargo carries no host openssl.
-    build: { default: ["rust-stage0" { name: "llvm", version: ">=21" } "python3-minimal" "cmake" "gmake" "openssl"] }
+    # libcxx (musl only): the managed llvm is built against libc++, so rustc_llvm makes
+    # librustc_driver.so link -lc++; declaring it gives LIBCXX_PREFIX, which the linker wrapper
+    # points at — the exact installed (PIC) libc++, not whatever an ambiguous store glob would find.
+    build: { default: ["rust-stage0" { name: "llvm", version: ">=21" } "python3-minimal" "cmake" "gmake" "openssl" "libcxx[linux-*-musl]"] }
     # rustc invokes the system linker driver (`cc`) for every link; toolchain-wrappers is
     # what actually puts `cc` (delegating to the managed clang) on PATH. On musl, the host tools
     # are dynamically linked and their PT_INTERP points at musl's in-store loader, so musl must
@@ -99,10 +102,10 @@ export def build [ctx] {
     # arch out of the target triple); musl ships exactly one `ld-musl-<arch>.so.1` in its lib dir.
     let loader = (^find ($musl | path join "lib") -name "ld-musl-*.so.1" | lines | first)
     # librustc_driver.so links the managed LLVM, which is built against libc++, so the link emits
-    # -lc++. libc++ lives in the libcxx store prefix (a floor, not on the link path), so add its lib
-    # dir. The floor injects libc++ as flags, not a <DEP>_PREFIX env, so glob for it under the store
-    # root (= the musl prefix's parent); every libcxx 22.1.7 archive is PIC and ABI-identical.
-    let libcxx_lib = (^find ($musl | path dirname) -maxdepth 3 -path "*libcxx*/lib/libc++.a" | lines | first | path dirname)
+    # -lc++. Point at the libcxx build dep's lib dir via LIBCXX_PREFIX — the exact installed (PIC)
+    # libc++. (A store glob would be ambiguous: several libcxx hashes coexist and only the newest is
+    # PIC/.so-safe, so picking the wrong one reintroduces the R_AARCH64_TLSLE link failure.)
+    let libcxx_lib = ($env.LIBCXX_PREFIX | path join "lib")
     let wrap = ($source_dir | path join "grm-musl-linker")
     $"#!/bin/sh\nexec cc \"$@\" --sysroot=($musl) -isystem ($musl)/include -isystem ($lh)/include -B($musl)/lib -L($musl)/lib -L($libcxx_lib) --rtlib=compiler-rt --unwindlib=none -Wl,--dynamic-linker=($loader)\n" | save --force $wrap
     ^chmod +x $wrap
