@@ -89,9 +89,10 @@ export def build [ctx] {
   # the gnu (host) triple, `host`/`target` the musl triple we produce.
   let build_triple = if $is_musl { ($rust_triple | str replace "musl" "gnu") } else { $rust_triple }
 
-  # A linker wrapper for the musl target. The managed clang already defaults to the musl triple,
-  # but it has no baked sysroot and rustc drives the linker directly (not via CFLAGS), so the musl
-  # sysroot, CRT, libc, compiler-rt, and the in-store dynamic loader are pinned here. The host
+  # A linker wrapper for the musl target. The managed clang already defaults to the musl triple and
+  # to compiler-rt (CLANG_DEFAULT_RTLIB), but it has no baked sysroot and rustc drives the linker
+  # directly (not via CFLAGS), so the musl sysroot, CRT, libc, and the in-store dynamic loader are
+  # pinned here (--unwindlib=none because the unwind*lib* default is still libgcc). The host
   # tools are linked *dynamically* (crt-static = false) so rustc can dlopen proc-macros; their
   # PT_INTERP points at musl's in-store `ld-musl-<arch>.so.1`, so nothing in /lib is needed.
   mut linker = "cc"
@@ -107,7 +108,7 @@ export def build [ctx] {
     # PIC/.so-safe, so picking the wrong one reintroduces the R_AARCH64_TLSLE link failure.)
     let libcxx_lib = ($env.LIBCXX_PREFIX | path join "lib")
     let wrap = ($source_dir | path join "grm-musl-linker")
-    $"#!/bin/sh\nexec cc \"$@\" --sysroot=($musl) -isystem ($musl)/include -isystem ($lh)/include -B($musl)/lib -L($musl)/lib -L($libcxx_lib) --rtlib=compiler-rt --unwindlib=none -Wl,--dynamic-linker=($loader)\n" | save --force $wrap
+    $"#!/bin/sh\nexec cc \"$@\" --sysroot=($musl) -isystem ($musl)/include -isystem ($lh)/include -B($musl)/lib -L($musl)/lib -L($libcxx_lib) --unwindlib=none -Wl,--dynamic-linker=($loader)\n" | save --force $wrap
     ^chmod +x $wrap
     $linker = $wrap
   }
@@ -170,7 +171,7 @@ export def build [ctx] {
     # musl's CRT (crt1.o/crti.o/crtn.o/Scrt1.o) and libc.a that std links. llvm-libunwind = in-tree:
     # rust's unwind crate links GCC's -lgcc_s on musl by default, absent in the managed
     # compiler-rt/libunwind world; build llvm's libunwind from the vendored source and link it
-    # statically instead (consistent with the wrapper's --rtlib=compiler-rt --unwindlib=none).
+    # statically instead (consistent with the wrapper's --unwindlib=none).
     $config = $config + $"musl-root = \"($env.MUSL_PREFIX)\"\nllvm-libunwind = \"in-tree\"\n\n"
     # The build (gnu) triple also needs a stanza — build scripts and proc-macros (rustc_macros,
     # serde_derive) are compiled for it and run on the build host, dlopen'd into the *glibc* stage0.

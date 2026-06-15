@@ -58,8 +58,9 @@ export def build [ctx] {
     # to force +crt-static (which would wrongly make the proc-macro/build-script crates static too —
     # rust keeps proc-macros dynamic so rustc can dlopen them; the default crt-static already exempts
     # them). rustc drives the linker directly (bypassing CFLAGS), so a wrapper pins the musl
-    # sysroot/CRT/compiler-rt the managed clang needs — without it a host proc-macro .so links bare
-    # `cc` and fails hunting gcc's crtbeginS.o. Set it as the linker for EVERY unit: no --target, so
+    # sysroot/CRT the managed clang needs (compiler-rt is the clang default; --unwindlib=none because
+    # the unwindlib default is still libgcc) — without it a host proc-macro .so links bare `cc` and
+    # fails hunting gcc's crtbeginS.o. Set it as the linker for EVERY unit: no --target, so
     # RUSTFLAGS reaches host and target units alike (with --target it would not reach host units).
     # Append to the harness RUSTFLAGS to keep its --remap-path-prefix (grm reproducibility).
     # NB: unlike rust.rn's wrapper, NO --dynamic-linker here. crt-static makes every grm unit (the
@@ -69,7 +70,7 @@ export def build [ctx] {
     let musl = $env.MUSL_PREFIX
     let lh = $env.LINUX_HEADERS_PREFIX
     let wrap = ($source_dir | path join "grm-musl-linker")
-    $"#!/bin/sh\nexec cc \"$@\" --sysroot=($musl) -isystem ($musl)/include -isystem ($lh)/include -B($musl)/lib -L($musl)/lib --rtlib=compiler-rt --unwindlib=none\n" | save --force $wrap
+    $"#!/bin/sh\nexec cc \"$@\" --sysroot=($musl) -isystem ($musl)/include -isystem ($lh)/include -B($musl)/lib -L($musl)/lib --unwindlib=none\n" | save --force $wrap
     ^chmod +x $wrap
     $env.RUSTFLAGS = $"($env.RUSTFLAGS) -C linker=($wrap)"
   }
