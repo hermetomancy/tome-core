@@ -177,30 +177,37 @@ export def build [ctx] {
   $env.OPENSSL_DIR = ($env.OPENSSL_PREFIX)
   $env.OPENSSL_STATIC = "1"
 
-  # Neutralize the musl floor's GENERIC CFLAGS/CXXFLAGS (--target=<musl> --sysroot=<musl> -isystem …,
-  # plus the libc++ -stdlib/-nostdinc++ on CXX) for the gnu BUILD triple only. The floor exports them
-  # unsuffixed for the whole build; the musl host=target cc-rs compiles need them for header
-  # resolution (the grm-musl-linker wrapper only acts at link time), but the build (gnu) triple's
-  # build scripts and proc-macros are compiled by the host glibc /usr/bin/cc and dlopen'd into the
-  # glibc stage0 — handing them --target=musl/--sysroot=musl/-static would break them. cc-rs reads
-  # CFLAGS_<triple> (dashed, then underscored) before the generic CFLAGS, so a clean per-triple value
-  # shadows the leak for the gnu triple while the musl triple keeps the generic flags. bootstrap.toml
-  # has no cflags key, so env is the only channel, and the rune subset has no dynamic env keys — set
-  # the literal names for both supported musl hosts' gnu build triples (only the active one is read);
-  # a non-empty value (-O2) guarantees cc-rs honours it over the generic fallback.
+  # Re-scope the musl floor's compiler flags from the GENERIC env vars onto the musl TARGET triple.
+  # The floor exports the retarget (--target=<musl> --sysroot=<musl> -isystem …, -static, libc++) on
+  # the unsuffixed CFLAGS/CXXFLAGS/LDFLAGS so autotools/cmake builds inherit it. But rust's bootstrap
+  # reads those generic vars when it builds llvm for the gnu BUILD triple and runs cc-rs for build-
+  # host helpers (the gnu stage1's llvm, build scripts, proc-macros that dlopen into the glibc
+  # stage0). Those must stay glibc; the leaked musl --target/-static/libc++ make them target musl and
+  # break the link (e.g. building the gnu llvm: -static + -shared → R_AARCH64_TLSLE TLS-reloc errors,
+  # libc++ TLS in a shared object). cc-rs and cargo read CFLAGS_<triple> before the generic var, so
+  # move the floor flags onto the musl target triple — where the musl -sys / llvm-wrapper compiles
+  # consume them — and clear the generic vars, leaving the gnu build-host compiles to fall back to
+  # clean host flags (/usr/bin/cc, glibc default sysroot). rustc-driven musl links use the
+  # grm-musl-linker wrapper, not these env vars, so clearing the generic LDFLAGS is safe for the musl
+  # side. The rune subset has no dynamic env keys, so set literal names for both supported musl
+  # targets (only the active triple's vars are read; the other's are inert).
   if $is_musl {
+    let cf = $env.CFLAGS
+    let cxf = $env.CXXFLAGS
+    let lf = $env.LDFLAGS
+    $env."CFLAGS_aarch64-unknown-linux-musl" = $cf
+    $env."CXXFLAGS_aarch64-unknown-linux-musl" = $cxf
+    $env."LDFLAGS_aarch64-unknown-linux-musl" = $lf
+    $env."CFLAGS_x86_64-unknown-linux-musl" = $cf
+    $env."CXXFLAGS_x86_64-unknown-linux-musl" = $cxf
+    $env."LDFLAGS_x86_64-unknown-linux-musl" = $lf
+    $env.CFLAGS = ""
+    $env.CXXFLAGS = ""
+    $env.LDFLAGS = ""
     $env."CC_aarch64-unknown-linux-gnu" = "/usr/bin/cc"
     $env."CXX_aarch64-unknown-linux-gnu" = "/usr/bin/c++"
-    $env."CFLAGS_aarch64-unknown-linux-gnu" = "-O2"
-    $env."CXXFLAGS_aarch64-unknown-linux-gnu" = "-O2"
-    $env."CFLAGS_aarch64_unknown_linux_gnu" = "-O2"
-    $env."CXXFLAGS_aarch64_unknown_linux_gnu" = "-O2"
     $env."CC_x86_64-unknown-linux-gnu" = "/usr/bin/cc"
     $env."CXX_x86_64-unknown-linux-gnu" = "/usr/bin/c++"
-    $env."CFLAGS_x86_64-unknown-linux-gnu" = "-O2"
-    $env."CXXFLAGS_x86_64-unknown-linux-gnu" = "-O2"
-    $env."CFLAGS_x86_64_unknown_linux_gnu" = "-O2"
-    $env."CXXFLAGS_x86_64_unknown_linux_gnu" = "-O2"
   }
 
   ^python3 x.py install --jobs ($ctx.nproc)
