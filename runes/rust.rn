@@ -9,8 +9,7 @@
 # once), which is the upstream dist configuration — expect roughly two compiler builds' worth
 # of wall clock on top of std.
 #
-# Targets mirror rust-stage0: a host can only self-bootstrap where official stage0 binaries
-# exist. linux-aarch64-musl still needs a cross build from a bootstrapped host.
+# Targets mirror rust-stage0: a host can only self-bootstrap where official stage0 binaries exist.
 #
 # To fill in the hash:  curl -sL https://static.rust-lang.org/dist/rustc-<version>-src.tar.xz.sha256
 
@@ -21,6 +20,7 @@ const RUST_TRIPLES = {
   "macos-aarch64-darwin": "aarch64-apple-darwin"
   "macos-x86_64-darwin": "x86_64-apple-darwin"
   "linux-x86_64-musl": "x86_64-unknown-linux-musl"
+  "linux-aarch64-musl": "aarch64-unknown-linux-musl"
   "linux-x86_64-gnu": "x86_64-unknown-linux-gnu"
   "linux-aarch64-gnu": "aarch64-unknown-linux-gnu"
   "freebsd-x86_64-unknown": "x86_64-unknown-freebsd"
