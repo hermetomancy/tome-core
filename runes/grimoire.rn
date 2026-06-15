@@ -62,12 +62,14 @@ export def build [ctx] {
     # `cc` and fails hunting gcc's crtbeginS.o. Set it as the linker for EVERY unit: no --target, so
     # RUSTFLAGS reaches host and target units alike (with --target it would not reach host units).
     # Append to the harness RUSTFLAGS to keep its --remap-path-prefix (grm reproducibility).
-    # --dynamic-linker covers any dynamic unit; the static grm has no PT_INTERP and ignores it.
+    # NB: unlike rust.rn's wrapper, NO --dynamic-linker here. crt-static makes every grm unit (the
+    # binary and the host build-script executables) a static-PIE that self-relocates with no
+    # interpreter; stamping a PT_INTERP onto a static-PIE makes the kernel hand it to the loader and
+    # it SIGSEGVs. Proc-macro .so's carry no PT_INTERP regardless, so no unit needs a dynamic linker.
     let musl = $env.MUSL_PREFIX
     let lh = $env.LINUX_HEADERS_PREFIX
-    let loader = (^find ($musl | path join "lib") -name "ld-musl-*.so.1" | lines | first)
     let wrap = ($source_dir | path join "grm-musl-linker")
-    $"#!/bin/sh\nexec cc \"$@\" --sysroot=($musl) -isystem ($musl)/include -isystem ($lh)/include -B($musl)/lib -L($musl)/lib --rtlib=compiler-rt --unwindlib=none -Wl,--dynamic-linker=($loader)\n" | save --force $wrap
+    $"#!/bin/sh\nexec cc \"$@\" --sysroot=($musl) -isystem ($musl)/include -isystem ($lh)/include -B($musl)/lib -L($musl)/lib --rtlib=compiler-rt --unwindlib=none\n" | save --force $wrap
     ^chmod +x $wrap
     $env.RUSTFLAGS = $"($env.RUSTFLAGS) -C linker=($wrap)"
   }
