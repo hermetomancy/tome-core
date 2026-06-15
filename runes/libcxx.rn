@@ -1,0 +1,48 @@
+export const package = {
+  name: "libcxx"
+  version: "22.1.7"
+  summary: "LLVM C++ runtime for musl (libc++, libc++abi, libunwind) — the stage-1 C++ standard library that lets the toolchain itself build against musl"
+  homepage: "https://libcxx.llvm.org/"
+  license: "Apache-2.0 WITH LLVM-exception"
+
+  # Linux/musl only. macOS gets its C++ standard library from the platform SDK (the floor),
+  # so there is nothing to build there; this rune exists to fill the gap musl leaves.
+  targets: ["linux-x86_64-musl" "linux-aarch64-musl"]
+
+  sources: {
+    main: {
+      url: "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.7/llvm-project-22.1.7.src.tar.xz"
+      sha256: "sha256:5cc4a3f12bba50b6bdfb4b61bdc852117a0ff2517807c3902fc13267fb93562e"
+    }
+  }
+
+  deps: {
+    build: { default: ["cmake" "gmake"] }
+    runtime: []
+  }
+}
+
+export def build [ctx] {
+  let nproc = $ctx.nproc
+  let source_dir = ($ctx.sources.main.dir | path join "llvm-project-22.1.7.src")
+  cd $source_dir
+
+  # The stage-1 C++ runtime bootstrap. LLVM is C++, so the toolchain can't build against musl
+  # until a musl C++ standard library exists — and the only source of one is libc++, part of
+  # LLVM itself (the classic chicken-and-egg). This builds it with the host clang (the bootstrap
+  # boundary) cross-targeting musl, using the managed musl env (--target/--sysroot/-isystem).
+  #
+  # CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY: CMake's initial compiler probe does a full
+  # link, which needs the very C++ stdlib we are about to build; making the probe compile-only
+  # breaks that cycle. Everything is static (musl ships no shared libc/loader in the store), and
+  # compiler-rt + the LLVM unwinder replace libgcc/libgcc_eh. Tests/benchmarks are off (they pull
+  # in test tooling that probes a host clang install we don't have).
+  #
+  # LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY folds libc++abi into libc++.a, so a consumer's
+  # plain `-stdlib=libc++` resolves the `__cxa_*`/typeinfo symbols without a separate `-lc++abi`
+  # (whose link order CMake would otherwise get wrong); the unwinder still comes via
+  # `--unwindlib=libunwind`.
+  cmake -S runtimes -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" -DLIBCXX_HAS_MUSL_LIBC=ON -DLIBCXX_ENABLE_SHARED=OFF -DLIBCXX_ENABLE_STATIC=ON -DLIBCXXABI_ENABLE_SHARED=OFF -DLIBCXXABI_ENABLE_STATIC=ON -DLIBUNWIND_ENABLE_SHARED=OFF -DLIBUNWIND_ENABLE_STATIC=ON -DLIBCXXABI_USE_LLVM_UNWINDER=ON -DLIBCXX_USE_COMPILER_RT=ON -DLIBCXXABI_USE_COMPILER_RT=ON -DLIBUNWIND_USE_COMPILER_RT=ON -DLIBCXX_CXX_ABI=libcxxabi -DLIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY=ON -DLIBCXX_INCLUDE_TESTS=OFF -DLIBCXXABI_INCLUDE_TESTS=OFF -DLIBUNWIND_INCLUDE_TESTS=OFF -DLIBCXX_INCLUDE_BENCHMARKS=OFF -DCMAKE_INSTALL_PREFIX=($ctx.prefix)
+  cmake --build build --parallel ($nproc)
+  cmake --install build --prefix ($ctx.package_dir)
+}
