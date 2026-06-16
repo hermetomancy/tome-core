@@ -89,16 +89,15 @@ export def build [ctx] {
   # the gnu (host) triple, `host`/`target` the musl triple we produce.
   let build_triple = if $is_musl { ($rust_triple | str replace "musl" "gnu") } else { $rust_triple }
 
-  # A linker wrapper for the musl target. The managed clang already defaults to the musl triple and
-  # to compiler-rt (CLANG_DEFAULT_RTLIB), but it has no baked sysroot and rustc drives the linker
-  # directly (not via CFLAGS), so the musl sysroot, CRT, libc, and the in-store dynamic loader are
-  # pinned here (--unwindlib=none because the unwind*lib* default is still libgcc). The host
-  # tools are linked *dynamically* (crt-static = false) so rustc can dlopen proc-macros; their
-  # PT_INTERP points at musl's in-store `ld-musl-<arch>.so.1`, so nothing in /lib is needed.
+  # A linker wrapper for the musl target. The managed `cc` is now self-sufficient for the musl
+  # sysroot/CRT/libc/runtime/unwinder (toolchain-wrappers bakes --sysroot=$MUSL -B$MUSL/lib; clang
+  # defaults to compiler-rt and unwindlib=none), so the wrapper only adds what those defaults cannot:
+  # the libc++ lib dir (librustc_driver.so links -lc++) and the in-store dynamic loader. rustc drives
+  # the linker directly and the host tools are dynamic (crt-static = false) so rustc can dlopen proc-
+  # macros; their PT_INTERP must point at musl's in-store `ld-musl-<arch>.so.1`, never /lib's.
   mut linker = "cc"
   if $is_musl {
     let musl = $env.MUSL_PREFIX
-    let lh = $env.LINUX_HEADERS_PREFIX
     # Locate the in-store musl loader by glob (the rune command subset has no `split` to pull the
     # arch out of the target triple); musl ships exactly one `ld-musl-<arch>.so.1` in its lib dir.
     let loader = (^find ($musl | path join "lib") -name "ld-musl-*.so.1" | lines | first)
@@ -108,7 +107,7 @@ export def build [ctx] {
     # PIC/.so-safe, so picking the wrong one reintroduces the R_AARCH64_TLSLE link failure.)
     let libcxx_lib = ($env.LIBCXX_PREFIX | path join "lib")
     let wrap = ($source_dir | path join "grm-musl-linker")
-    $"#!/bin/sh\nexec cc \"$@\" --sysroot=($musl) -isystem ($musl)/include -isystem ($lh)/include -B($musl)/lib -L($musl)/lib -L($libcxx_lib) --unwindlib=none -Wl,--dynamic-linker=($loader)\n" | save --force $wrap
+    $"#!/bin/sh\nexec cc \"$@\" -L($libcxx_lib) -Wl,--dynamic-linker=($loader)\n" | save --force $wrap
     ^chmod +x $wrap
     $linker = $wrap
   }
