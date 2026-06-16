@@ -7,11 +7,11 @@
 #
 # The stage0 is a *host* tool: it runs on the build machine to compile `rust`. So it is keyed to
 # the build host's libc, not the package's target — a bootstrap compiler runs where the build runs.
-# For `linux-aarch64-musl` the seed is therefore the aarch64-**gnu** release: Rust's aarch64-musl
-# binaries are dynamically linked against `/lib/ld-musl-…` (absent on a glibc host), whereas the
-# gnu binaries use the host's own glibc loader and run natively. `rust.rn` then cross-builds the
-# musl toolchain from this gnu seed. (This bakes a glibc build host; a musl host would seed from the
-# musl release, or self-seed from a previously-built Grimoire rust — a host-detection follow-up.)
+# For `linux-aarch64-musl` the seed therefore depends on the build HOST's libc (`ctx.host_libc`,
+# resolved from the source `host_libc` filter): a glibc host takes the aarch64-**gnu** release (Rust's
+# aarch64-musl binaries are `ld-musl`-dynamic and cannot run there) and `rust.rn` cross-builds the musl
+# toolchain from it; a pure-musl host (e.g. Chimera Linux) takes the aarch64-**musl** release, whose
+# `ld-musl`-dynamic binaries run natively, and `rust.rn` builds the toolchain natively (no cross).
 #
 # To fill in a hash:  curl -sL https://static.rust-lang.org/dist/<tarball>.sha256
 
@@ -63,11 +63,21 @@ export const package = {
       sha256: "sha256:8b4db404e24a82be906170b7b64bd69807e72e59d8371bac2a7f0ade75b39697"
       platform: "linux-x86_64-musl"
     }
-    "linux-aarch64-musl": {
-      # The gnu seed (host-native on a glibc host) — see the RUST_TRIPLES note above.
+    "linux-aarch64-musl-glibc-host": {
+      # Cross-seed for a glibc build host: the gnu release runs on the host's own glibc loader;
+      # rust.rn cross-builds the musl toolchain from it.
       url: "https://static.rust-lang.org/dist/rust-1.96.0-aarch64-unknown-linux-gnu.tar.xz"
       sha256: "sha256:371eadcca97062219cbd8593628eb5d2802bc370515d085fedce1b56b2baed57"
       platform: "linux-aarch64-musl"
+      host_libc: "glibc"
+    }
+    "linux-aarch64-musl-musl-host": {
+      # Native seed for a pure-musl build host (Chimera Linux): the aarch64-musl release is
+      # ld-musl-dynamic, so it runs only on a musl host, where rust.rn then builds natively.
+      url: "https://static.rust-lang.org/dist/rust-1.96.0-aarch64-unknown-linux-musl.tar.xz"
+      sha256: "sha256:630541a6e08412c76062a7a10aba0f737044ecab4d16b7b338049da7db68c90c"
+      platform: "linux-aarch64-musl"
+      host_libc: "musl"
     }
     "linux-x86_64-gnu": {
       url: "https://static.rust-lang.org/dist/rust-1.96.0-x86_64-unknown-linux-gnu.tar.xz"
@@ -108,13 +118,23 @@ export const package = {
 }
 
 export def build [ctx] {
-  let rust_triple = ($RUST_TRIPLES | get ($ctx.target))
-  let dist = (($ctx.sources | get ($ctx.target)).dir | path join $"rust-($VERSION)-($rust_triple)")
+  # The seed triple = the release actually fetched. RUST_TRIPLES gives it for every case except a
+  # pure-musl host building linux-aarch64-musl, which fetched the aarch64-musl release instead of the
+  # gnu cross-seed (see the host_libc source filter above).
+  let seed_triple = if ($ctx.target == "linux-aarch64-musl") and ($ctx.host_libc == "musl") {
+    "aarch64-unknown-linux-musl"
+  } else {
+    ($RUST_TRIPLES | get ($ctx.target))
+  }
+  # Exactly one source survives the platform + host_libc filter; its key varies (…-glibc-host /
+  # …-musl-host), so take it by its sole column rather than by the target name.
+  let src = ($ctx.sources | get ($ctx.sources | columns | first))
+  let dist = ($src.dir | path join $"rust-($VERSION)-($seed_triple)")
 
   # The combined tarball is a set of component trees (rustc/, cargo/, rust-std-<triple>/),
   # each holding a bin/lib/share layout plus a manifest.in we do not want. Merge each
   # component's subtrees into the staging root instead of running its install.sh.
-  for component in ["rustc" "cargo" $"rust-std-($rust_triple)"] {
+  for component in ["rustc" "cargo" $"rust-std-($seed_triple)"] {
     let component_dir = ($dist | path join $component)
     if not ($component_dir | path exists) {
       error make { msg: $"dist tarball is missing expected component ($component)" }

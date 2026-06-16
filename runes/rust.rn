@@ -84,10 +84,12 @@ export def build [ctx] {
   cd $source_dir
 
   let is_musl = ($ctx.target | str ends-with "-musl")
-  # The stage0 runs on the build host; on a glibc host the musl seed can't run, so rust-stage0
-  # gives us the gnu seed and we cross-compile the musl toolchain from it. `build` is therefore
-  # the gnu (host) triple, `host`/`target` the musl triple we produce.
-  let build_triple = if $is_musl { ($rust_triple | str replace "musl" "gnu") } else { $rust_triple }
+  # On a glibc host the musl seed can't run, so rust-stage0 gives us the gnu seed and we CROSS-build
+  # the musl toolchain from it: `build` is the gnu (host) triple, `host`/`target` the musl triple we
+  # produce. On a pure-musl host (ctx.host_libc == "musl") the seed is already musl and the build is
+  # native — build == host == target == musl, no cross stanza, no gnu build-host helpers.
+  let is_cross_musl = ($is_musl and ($ctx.host_libc != "musl"))
+  let build_triple = if $is_cross_musl { ($rust_triple | str replace "musl" "gnu") } else { $rust_triple }
 
   # A linker wrapper for the musl target. The managed `cc` is now self-sufficient for the musl
   # sysroot/CRT/libc/runtime/unwinder (toolchain-wrappers bakes --sysroot=$MUSL -B$MUSL/lib; clang
@@ -172,12 +174,17 @@ export def build [ctx] {
     # compiler-rt/libunwind world; build llvm's libunwind from the vendored source and link it
     # statically instead (consistent with the wrapper's --unwindlib=none).
     $config = $config + $"musl-root = \"($env.MUSL_PREFIX)\"\nllvm-libunwind = \"in-tree\"\n\n"
-    # The build (gnu) triple also needs a stanza — build scripts and proc-macros (rustc_macros,
-    # serde_derive) are compiled for it and run on the build host, dlopen'd into the *glibc* stage0.
-    # They must be glibc artifacts: the managed clang defaults to musl (a musl .so can't load into a
-    # glibc process), so use the host's native glibc /usr/bin/cc. Ephemeral build-host helpers — every
-    # artifact that lands in the store is still produced by the managed musl clang via the stanza above.
-    $config = $config + $"[target.($build_triple)]\ncc = \"/usr/bin/cc\"\ncxx = \"/usr/bin/c++\"\nlinker = \"/usr/bin/cc\"\n\n"
+    if $is_cross_musl {
+      # Cross from a glibc host: the gnu BUILD triple needs its own stanza — build scripts and
+      # proc-macros (rustc_macros, serde_derive) are compiled for it and run on the build host,
+      # dlopen'd into the *glibc* stage0. They must be glibc artifacts: the managed clang defaults to
+      # musl (a musl .so can't load into a glibc process), so use the host's native glibc /usr/bin/cc.
+      # Ephemeral build-host helpers — every artifact that lands in the store is still produced by the
+      # managed musl clang via the musl stanza above.
+      $config = $config + $"[target.($build_triple)]\ncc = \"/usr/bin/cc\"\ncxx = \"/usr/bin/c++\"\nlinker = \"/usr/bin/cc\"\n\n"
+    }
+    # Native musl host: build == host == target == musl, so the single [target.<musl>] stanza already
+    # covers the build-host helpers — they are musl artifacts built by the managed musl clang.
   }
   $config | save --force bootstrap.toml
 
@@ -202,8 +209,10 @@ export def build [ctx] {
   # clean host flags (/usr/bin/cc, glibc default sysroot). rustc-driven musl links use the
   # grm-musl-linker wrapper, not these env vars, so clearing the generic LDFLAGS is safe for the musl
   # side. The rune subset has no dynamic env keys, so set literal names for both supported musl
-  # targets (only the active triple's vars are read; the other's are inert).
-  if $is_musl {
+  # targets (only the active triple's vars are read; the other's are inert). On a native musl host
+  # none of this applies — every compile is already musl, so the floor's generic flags are correct —
+  # so the re-scoping (which exists to keep the gnu build-host compiles clean) runs only when cross.
+  if $is_cross_musl {
     let cf = $env.CFLAGS
     let cxf = $env.CXXFLAGS
     let lf = $env.LDFLAGS
