@@ -1,6 +1,6 @@
 export const package = {
   name: "clang"
-  version: "22.1.7"
+  version: "22.1.8"
   summary: "Clang C/C++ compiler"
   homepage: "https://clang.llvm.org/"
   license: "Apache-2.0 WITH LLVM-exception"
