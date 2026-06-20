@@ -1,6 +1,6 @@
 export const package = {
   name: "linux-headers"
-  version: "6.12.93"
+  version: "6.12.94"
   summary: "Linux kernel headers"
   homepage: "https://www.kernel.org/"
   license: "GPL-2.0-only"
@@ -8,8 +8,8 @@ export const package = {
 
   sources: {
     main: {
-      url: "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.12.93.tar.xz"
-      sha256: "sha256:492648a87c0b69c5ac7f43be64792b9000e3439550d4e82e4a14710c49094fa3"
+      url: "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.12.94.tar.xz"
+      sha256: "sha256:a6cd115d1941925f1b795ce97b55dacc98df10218a9542c259d5aed78a5d9ef8"
     }
   }
 
@@ -22,7 +22,7 @@ export const package = {
 
 export def build [ctx] {
   let nproc = $ctx.nproc
-  let source_dir = ($ctx.sources.main.dir | path join "linux-6.12.93")
+  let source_dir = ($ctx.sources.main.dir | path join "linux-6.12.94")
   cd $source_dir
   # `make headers_install` does its final copy with rsync (the kernel's cmd_headers_install),
   # which the sandboxed build floor doesn't provide — toybox ships no rsync, and pulling it in
