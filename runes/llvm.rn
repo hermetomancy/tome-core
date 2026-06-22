@@ -4,6 +4,12 @@ export const package = {
   summary: "LLVM compiler infrastructure"
   homepage: "https://llvm.org/"
   license: "Apache-2.0 WITH LLVM-exception"
+
+  # build_only: see clang.rn. The toolchain is reached by store path (the cc wrapper, clang's
+  # driver), never needed on the user PATH; pinned in the store but off the active profile so its
+  # ~50 bins (llc, opt, FileCheck, …) stay out of profiles/current/bin.
+  build_only: true
+
   sources: {
     main: {
       url: "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.7/llvm-project-22.1.7.src.tar.xz"

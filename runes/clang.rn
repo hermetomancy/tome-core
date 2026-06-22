@@ -5,6 +5,12 @@ export const package = {
   homepage: "https://clang.llvm.org/"
   license: "Apache-2.0 WITH LLVM-exception"
 
+  # build_only: the compiler is build machinery, reached by the cc/c++ wrappers (and clang's own
+  # driver) via store path, never by users via PATH. Pinned in the store but kept off the active
+  # profile so its ~30 bins don't flood it; an explicit `grm install clang` still links it by name.
+  # llvm carries the same flag — they share one monorepo build.
+  build_only: true
+
   # Split member: built by llvm.rn's monorepo build; these globs claim clang's slice. An individual
   # glob may match nothing (build options vary); only an empty member as a whole fails.
   # lib/clang/** is the resource dir, holding the compiler-rt runtimes the monorepo installs there
