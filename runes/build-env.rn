@@ -6,6 +6,13 @@ export const package = {
   license: "MIT"
   sources: {}
 
+  # build_only: the toolchain is pinned in the store (kept across `grm clean`, available to source
+  # builds) but never linked into the active profile — its bins (toybox's coreutils, clang, cmake,
+  # python3, …) are build machinery, not user commands, so installing build-env does not flood
+  # `profiles/current/bin`. Builds still find the toolchain via the build-dep PATH; this only keeps
+  # it off the *user* PATH.
+  build_only: true
+
   # Pure meta-package: ships a marker file and pulls the managed toolchain through its
   # runtime deps (toolchain-wrappers transitively brings clang and llvm). Out-of-core
   # packages that compile from source declare `build: ["build-env"]` instead of
@@ -16,8 +23,9 @@ export const package = {
   # contents of its own). A rune that needs a concrete prefix — `$env.LLVM_PREFIX`,
   # `$env.PYTHON3_MINIMAL_PREFIX` — must declare that package directly, alongside build-env.
   notes: [
-    "installed explicitly, build-env keeps the managed toolchain until `grm remove build-env`;"
-    "pulled in as a mere build dep it is cache, and `grm clean` reclaims it"
+    "installed explicitly, build-env pins the managed toolchain (kept across `grm clean`) but"
+    "keeps it off your PATH — it is build machinery, not user commands. Pulled in as a build dep"
+    "it is plain cache that `grm clean` reclaims."
   ]
 
   deps: {
