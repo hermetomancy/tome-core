@@ -212,6 +212,28 @@ export def build [ctx] {
     $env."CXX_x86_64-unknown-linux-gnu" = "/usr/bin/c++"
   }
 
+  # The prebuilt musl stage0 (official rust-lang.org binary) is GCC-linked: its rustc/cargo carry a
+  # NEEDED libgcc_s.so.1 and versioned _Unwind_*@GCC_* refs. A pure-LLVM musl host (e.g. Chimera)
+  # ships no libgcc_s, only libunwind.so.1 — the same _Unwind_* ABI under a different SONAME — so the
+  # seed won't even load ("_Unwind_Resume: symbol not found"). Alias libgcc_s.so.1 -> the host
+  # libunwind for the seed's runtime only (musl's lenient symbol versioning accepts the unversioned
+  # defs). Same host lean the seed already makes via the host's /lib/ld-musl loader; it touches
+  # nothing shipped (the rust we build uses in-tree libunwind, --unwindlib=none) and only the
+  # native-musl-host seed needs it (a glibc cross-host's gnu seed finds libgcc_s on its own host).
+  if ($is_musl and ($ctx.host_libc == "musl")) {
+    let found = (^find /usr/lib -maxdepth 1 -name "libunwind.so.1" | lines)
+    if ($found | is-empty) {
+      error make { msg: "rust musl stage0 needs a host libunwind.so.1 to alias as libgcc_s.so.1; none found in /usr/lib" }
+    }
+    let shim = ($source_dir | path join "grm-stage0-libgcc")
+    mkdir $shim
+    ^ln -sf ($found | first) ($shim | path join "libgcc_s.so.1")
+    # LD_LIBRARY_PATH is in the runtime's scrubbed-discovery list (set empty at env setup), so a plain
+    # assignment is correct here — nothing host-inherited to preserve. external.rs forwards $env to
+    # ^python3, which passes it to the x.py-spawned stage0 rustc/cargo.
+    $env.LD_LIBRARY_PATH = $shim
+  }
+
   ^python3 x.py install --jobs ($ctx.nproc)
 
   # rust-installer bookkeeping (manifests, uninstall script) has no place in an immutable store.
