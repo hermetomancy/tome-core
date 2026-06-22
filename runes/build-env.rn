@@ -8,13 +8,13 @@ export const package = {
 
   # build_only: the toolchain is pinned in the store (kept across `grm clean`, available to source
   # builds) but never linked into the active profile — its bins (toybox's coreutils, clang, cmake,
-  # python3, …) are build machinery, not user commands, so installing build-env does not flood
+  # python3, rustc, …) are build machinery, not user commands, so installing build-env does not flood
   # `profiles/current/bin`. Builds still find the toolchain via the build-dep PATH; this only keeps
   # it off the *user* PATH.
   build_only: true
 
   # Pure meta-package: ships a marker file and pulls the managed toolchain through its
-  # runtime deps (toolchain-wrappers transitively brings clang and llvm). Out-of-core
+  # runtime deps (toolchain-wrappers brings clang/llvm; rust is the managed Rust compiler). Out-of-core
   # packages that compile from source declare `build: ["build-env"]` instead of
   # enumerating the toolchain; the dep's runtime closure is installed store-only and the
   # core packages' bin dirs join the build PATH once present.
@@ -31,6 +31,11 @@ export const package = {
   deps: {
     build: {}
     runtime: [
+      # The managed Rust compiler that builds grimoire itself (and other rust packages). Pinning it
+      # here keeps the *built* compiler as a GC root, so `grm clean` followed by `grm upgrade
+      # grimoire` reuses it instead of rebuilding rust + its own build deps (rust-stage0, libcxx,
+      # openssl) from scratch. `build_only` keeps rustc/cargo off the user PATH.
+      "rust"
       "toolchain-wrappers"
       "cmake"
       "gmake"
