@@ -11,6 +11,11 @@
 #   COMMIT=<full sha>
 #   curl -sL https://codeload.github.com/hermetomancy/grimoire/tar.gz/$COMMIT | shasum -a 256
 # then update COMMIT, the version date, and the sha256 below.
+#
+# CAUTION: GitHub's codeload tar.gz is generated on demand and its gzip bytes are NOT stable right
+# after a push — a freshly-generated archive can hash differently from the one GitHub later caches
+# and serves consistently. Fetch the hash, wait, fetch again; only pin once two fetches agree (the
+# cached value). The decompressed content is always stable; only the gzip wrapper drifts.
 
 const COMMIT = "bd3b0312320ec9bb6af62b3252e28fc1b733657c"
 
@@ -24,7 +29,7 @@ export const package = {
   sources: {
     main: {
       url: "https://codeload.github.com/hermetomancy/grimoire/tar.gz/bd3b0312320ec9bb6af62b3252e28fc1b733657c"
-      sha256: "sha256:d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed"
+      sha256: "sha256:aa7f70d92dcf3d147cbf9965fc16852e8396d423797aa2ebc48df0b5297e0c1a"
     }
   }
 
