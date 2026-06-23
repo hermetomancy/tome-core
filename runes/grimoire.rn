@@ -17,19 +17,19 @@
 # and serves consistently. Fetch the hash, wait, fetch again; only pin once two fetches agree (the
 # cached value). The decompressed content is always stable; only the gzip wrapper drifts.
 
-const COMMIT = "97f5a8c45d4842500b965f40247399d8ad7a56e1"
+const COMMIT = "6f46d97301dfa43d85d801e4ad2be409cf65a082"
 
 export const package = {
   name: "grimoire"
-  version: "0.1.0-dev.20260623.2"
+  version: "0.1.0-dev.20260623.3"
   summary: "Grimoire itself: the grm package manager, built from source"
   homepage: "https://github.com/hermetomancy/grimoire"
   license: "MIT"
 
   sources: {
     main: {
-      url: "https://codeload.github.com/hermetomancy/grimoire/tar.gz/97f5a8c45d4842500b965f40247399d8ad7a56e1"
-      sha256: "sha256:ff584c134aba7b86f880d0f3cf2912e2b9e2cd9476ce1cc50f46010f49d3bf02"
+      url: "https://codeload.github.com/hermetomancy/grimoire/tar.gz/6f46d97301dfa43d85d801e4ad2be409cf65a082"
+      sha256: "sha256:4199c0a6b561ed389cc3b44e7ca0ef48fce8251ac07dd689b85761742ff9b121"
     }
   }
 
