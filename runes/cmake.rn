@@ -25,13 +25,21 @@ export def build [ctx] {
   cd $source_dir
   # Without --parallel, bootstrap compiles its temporary mini-cmake serially.
   #
-  # -DCMAKE_USE_OPENSSL=OFF: on Linux bootstrap builds bundled curl (cmcurl), which defaults
-  # CMAKE_USE_OPENSSL=ON and hard-fails probing the host for OpenSSL — the host auto-detection
-  # the sandbox forbids (AGENTS.md §5.3). cmake needs TLS only for file(DOWNLOAD https)/ctest,
-  # which the hermetic model never exercises, so disable it rather than pull openssl into the
-  # runtime closure. macOS is unaffected: its bootstrap defaults to --system-curl, so bundled
-  # curl and this flag are never built. Everything after `--` is forwarded to configure.
-  ./bootstrap --prefix=($ctx.prefix) --parallel=($nproc) -- -DCMAKE_USE_OPENSSL=OFF
+  # --no-system-libs: link cmake's bundled zlib/curl/etc. instead of probing the host. macOS
+  # otherwise defaults to --system-curl and drags in host libcurl -> libz (undeclared host linkage
+  # the hermetic model forbids); Linux already builds bundled. Pulling the host libs is not an
+  # option — their managed equivalents (curl -> openssl + ca-certificates) live in tome-world, and a
+  # tome-core rune cannot depend on tome-world without inverting the bootstrap layering.
+  #
+  # -DCMAKE_USE_OPENSSL=OFF: bundled cmcurl defaults CMAKE_USE_OPENSSL=ON and hard-fails probing the
+  # host for OpenSSL (the auto-detection the sandbox forbids, AGENTS.md §5.3). cmake needs TLS only
+  # for file(DOWNLOAD https)/ctest, which a hermetic build never exercises, so disable it rather than
+  # pull openssl into the closure.
+  #
+  # -DBUILD_CursesDialog=OFF: ccmake is the sole ncurses consumer, and the interactive TUI is never
+  # used by build machinery — dropping it removes the last host-library link. Everything after `--`
+  # is forwarded to configure.
+  ./bootstrap --prefix=($ctx.prefix) --parallel=($nproc) --no-system-libs -- -DCMAKE_USE_OPENSSL=OFF -DBUILD_CursesDialog=OFF
   make -j($nproc)
   make install DESTDIR=($ctx.package_dir)
 }
