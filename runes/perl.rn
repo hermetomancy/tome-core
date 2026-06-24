@@ -1,0 +1,39 @@
+export const package = {
+  name: "perl"
+  version: "5.40.2"
+  summary: "Perl 5: the build-time interpreter that configure scripts reach for (openssl, git)"
+  homepage: "https://www.perl.org/"
+  license: "Artistic-1.0-Perl OR GPL-1.0-or-later"
+
+  # Not part of the always-on core floor: only a couple of runes need perl at build time
+  # (openssl's `Configure`, git's build scripts), so it is a declared build dep of those, not
+  # something every build carries on PATH. Packaging it is what lets `--hermetic` (which drops the
+  # host /usr/bin tail) build openssl instead of failing on a missing host `perl`.
+  sources: {
+    main: {
+      url: "https://www.cpan.org/src/5.0/perl-5.40.2.tar.gz"
+      sha256: "sha256:10d4647cfbb543a7f9ae3e5f6851ec49305232ea7621aed24c7cfbb0bef4b70d"
+    }
+  }
+
+  deps: {
+    build: { default: ["gmake"] }
+    runtime: []
+  }
+
+  bins: {
+    default: { perl: "bin/perl" }
+  }
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join "perl-5.40.2")
+  cd $source_dir
+  # Perl ships its own metaconfig-generated `Configure` (a POSIX-sh script), not autotools. -des =
+  # accept defaults, non-interactive. -Dcc=cc rides the managed compiler wrapper. -Doptimize=-O2
+  # drops autoconf-style -g so the temp build dir isn't baked in (the gmake/dash purity convention).
+  # man pages are skipped: nothing consumes them and it avoids the pod->man install pass.
+  sh Configure -des -Dprefix=($ctx.prefix) -Dcc=cc -Doptimize=-O2 -Dman1dir=none -Dman3dir=none
+  make -j ($ctx.nproc)
+  make install DESTDIR=($ctx.package_dir)
+}

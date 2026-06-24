@@ -16,7 +16,7 @@ export const package = {
   # runtime dep of consumers. openssl itself links only libc/pthreads. zlib stays off: its only
   # use here is the deprecated, insecure TLS record compression.
   deps: {
-    build: { default: ["gmake"] }
+    build: { default: ["gmake", "perl"] }
     runtime: []
   }
 
@@ -28,7 +28,8 @@ export const package = {
 export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "openssl-3.5.7")
   cd $source_dir
-  # ./config execs `perl ./Configure` (perl rides the ambient host floor, documented stage-2 debt).
+  # ./config execs `perl ./Configure`; perl is a declared build dep so it resolves from the store
+  # PATH even under --hermetic (no host /usr/bin tail).
   # --libdir=lib pins the layout (openssl picks lib64 on some 64-bit Linux); openssldir stays in the
   # store prefix for self-containment. no-docs/no-tests skip the perl man toolchain and test progs.
   #
