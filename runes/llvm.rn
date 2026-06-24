@@ -43,12 +43,15 @@ export def build [ctx] {
   # shared outline-atomics rule under `make -j`; kext/i386 slices are dead weight. DARWIN_*
   # flags forward to the builtins sub-build.
   #
-  # DARWIN_macosx_OVERRIDE_SDK_VERSION pins the SDK version so compiler-rt's find_darwin_sdk_version
-  # skips its `xcrun --show-sdk-version` probe — that host tool is gone under --hermetic, and without
-  # it the builtins (then runtimes) configure aborts with "Failed to determine SDK version". 11.0
-  # matches the MACOSX_DEPLOYMENT_TARGET floor and is the arm64 SDK floor, so the arm64 slice stays
-  # enabled. It must travel through BUILTINS/RUNTIMES_CMAKE_ARGS — a top-level -D never reaches the
-  # compiler-rt sub-builds.
+  # compiler-rt's darwin SDK introspection runs host xcrun, gone under --hermetic: find_darwin_sdk_version
+  # calls `xcrun --show-sdk-version` and find_darwin_sdk_dir calls `xcrun --show-sdk-path`. Feed both from
+  # cache vars so neither probes. DARWIN_macosx_OVERRIDE_SDK_VERSION=11.0 (the MACOSX_DEPLOYMENT_TARGET /
+  # arm64 floor) — without it the configure aborts "Failed to determine SDK version". DARWIN_macosx_CACHED_
+  # SYSROOT=$env.SDKROOT — without it the sysroot is empty and sdk_has_arch_support is called with a missing
+  # arg ("invoked with incorrect arguments"). compiler-rt then reads the SDK's own SDKSettings.plist via the
+  # absolute /usr/libexec/PlistBuddy (PATH-stripping doesn't block absolute execs), within the host-SDK
+  # boundary macOS builds already accept via SDKROOT. Both must travel through BUILTINS/RUNTIMES_CMAKE_ARGS
+  # — a top-level -D never reaches the compiler-rt sub-builds.
   let darwin_arch = match $ctx.target {
     "macos-aarch64-darwin" => "arm64"
     "macos-x86_64-darwin" => "x86_64"
@@ -88,7 +91,8 @@ export def build [ctx] {
   if ($darwin_arch | is-empty) {
     cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DCOMPILER_RT_BUILD_SANITIZERS=OFF -DCOMPILER_RT_BUILD_XRAY=OFF -DCOMPILER_RT_BUILD_LIBFUZZER=OFF -DCOMPILER_RT_BUILD_PROFILE=OFF -DCOMPILER_RT_BUILD_MEMPROF=OFF -DCOMPILER_RT_BUILD_ORC=OFF -DCOMPILER_RT_BUILD_GWP_ASAN=OFF -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DCLANG_DEFAULT_RTLIB=compiler-rt -DCLANG_DEFAULT_UNWINDLIB=none -DCLANG_DEFAULT_CXX_STDLIB=libc++ -DLLVM_ENABLE_LIBCXX=ON -DLLVM_ENABLE_PIC=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_SHARED_LIBS=OFF -DLLVM_BUILD_LLVM_DYLIB=OFF -DLLVM_LINK_LLVM_DYLIB=OFF -DLLVM_BUILD_LLVM_C_DYLIB=OFF -DCLANG_LINK_CLANG_DYLIB=OFF -DLLVM_ENABLE_PLUGINS=OFF -DLLVM_INSTALL_UTILS=ON
   } else {
-    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DDARWIN_osx_ARCHS=($darwin_arch) -DDARWIN_osx_BUILTIN_ARCHS=($darwin_arch) -DDARWIN_osx_SKIP_CC_KEXT=ON -DCMAKE_LINKER=ld64.lld -DBUILTINS_CMAKE_ARGS="-DCMAKE_LINKER=ld64.lld;-DDARWIN_macosx_OVERRIDE_SDK_VERSION=11.0" -DRUNTIMES_CMAKE_ARGS="-DCMAKE_LINKER=ld64.lld;-DDARWIN_macosx_OVERRIDE_SDK_VERSION=11.0" -DCMAKE_OSX_ARCHITECTURES=($darwin_arch) -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INSTALL_UTILS=ON
+    let crt_args = $"-DCMAKE_LINKER=ld64.lld;-DDARWIN_macosx_OVERRIDE_SDK_VERSION=11.0;-DDARWIN_macosx_CACHED_SYSROOT=($env.SDKROOT)"
+    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DDARWIN_osx_ARCHS=($darwin_arch) -DDARWIN_osx_BUILTIN_ARCHS=($darwin_arch) -DDARWIN_osx_SKIP_CC_KEXT=ON -DCMAKE_LINKER=ld64.lld -DBUILTINS_CMAKE_ARGS=($crt_args) -DRUNTIMES_CMAKE_ARGS=($crt_args) -DCMAKE_OSX_ARCHITECTURES=($darwin_arch) -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INSTALL_UTILS=ON
   }
   cmake --build build --parallel ($nproc)
   cmake --install build --prefix ($ctx.package_dir)
