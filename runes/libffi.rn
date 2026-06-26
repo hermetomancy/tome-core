@@ -1,6 +1,6 @@
 export const package = {
   name: "libffi"
-  version: "3.4.6"
+  version: "3.6.0"
   summary: "Foreign Function Interface library — backs Python's ctypes"
   homepage: "https://sourceware.org/libffi/"
   license: "MIT"
@@ -10,8 +10,8 @@ export const package = {
   # link; the managed lib on LIBRARY_PATH wins instead.
   sources: {
     main: {
-      url: "https://github.com/libffi/libffi/releases/download/v3.4.6/libffi-3.4.6.tar.gz"
-      sha256: "sha256:b0dea9df23c863a7a50e825440f3ebffabd65df1497108e5d437747843895a4e"
+      url: "https://github.com/libffi/libffi/releases/download/v3.6.0/libffi-3.6.0.tar.gz"
+      sha256: "sha256:31ff1fe32deaebfbb388727f32677bb254bf2a41382c51464c0b1837c9ee9828"
     }
   }
 
@@ -24,7 +24,7 @@ export const package = {
 }
 
 export def build [ctx] {
-  let source_dir = ($ctx.sources.main.dir | path join "libffi-3.4.6")
+  let source_dir = ($ctx.sources.main.dir | path join "libffi-3.6.0")
   cd $source_dir
   $env.CFLAGS = "-O2"
   ./configure --prefix=($ctx.prefix) --enable-static --disable-shared --with-pic --disable-dependency-tracking

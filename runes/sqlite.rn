@@ -33,7 +33,12 @@ export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "sqlite-autoconf-3470200")
   cd $source_dir
   $env.CFLAGS = "-O2"
-  ./configure --prefix=($ctx.prefix) --enable-static --disable-shared --with-pic --disable-dependency-tracking
+  # The editline probe links plain `-ledit` and grabs host /usr/lib/libedit despite the managed lib
+  # being on LIBRARY_PATH. Point CPPFLAGS/LDFLAGS at the managed libedit explicitly so its header and
+  # lib win, and force --enable-editline so the shell builds with line editing against it.
+  $env.CPPFLAGS = $"-I($env.LIBEDIT_PREFIX)/include"
+  $env.LDFLAGS = $"-L($env.LIBEDIT_PREFIX)/lib"
+  ./configure --prefix=($ctx.prefix) --enable-static --disable-shared --with-pic --enable-editline --disable-dependency-tracking
   make -j ($ctx.nproc)
   make install DESTDIR=($ctx.package_dir)
 }
