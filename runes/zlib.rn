@@ -1,0 +1,29 @@
+export const package = {
+  name: "zlib"
+  version: "1.3.2"
+  summary: "General-purpose lossless compression library"
+  homepage: "https://zlib.net/"
+  license: "Zlib"
+
+  sources: {
+    main: {
+      url: "https://zlib.net/zlib-1.3.2.tar.gz"
+      sha256: "sha256:bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16"
+    }
+  }
+
+  # Static-only: consumers link libz.a at build time and carry no runtime reference,
+  # so zlib is a build dep for them, never a runtime dep.
+  deps: {
+    build: { default: ["gmake"] }
+    runtime: []
+  }
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join "zlib-1.3.2")
+  cd $source_dir
+  ./configure --prefix=($ctx.prefix) --static
+  make -j ($ctx.nproc)
+  make install DESTDIR=($ctx.package_dir)
+}
