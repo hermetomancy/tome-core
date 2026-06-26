@@ -39,12 +39,11 @@ export def build [ctx] {
   $env.CPPFLAGS = $"-I($env.LIBEDIT_PREFIX)/include"
   $env.LDFLAGS = $"-L($env.LIBEDIT_PREFIX)/lib"
   ./configure --prefix=($ctx.prefix) --enable-static --disable-shared --with-pic --enable-editline --disable-dependency-tracking
-  # configure substitutes the shell's readline libs straight into sqlite3_LDADD as `-ledit -ltinfo`,
-  # and libtool rewrites `-ledit` to a full *host* path from its own search (ignoring our -L). Feed it
-  # the managed libedit by full path instead — libtool honors a path verbatim — alongside the
-  # amalgamation object (EXTRA_SHELL_OBJ = sqlite3-sqlite3.o, since enable_static_shell defaults yes).
-  # The managed libedit dylib self-contains ncursesw, so no -ltinfo is needed and no host lib leaks.
-  let ldadd = $"sqlite3-sqlite3.o ($env.LIBEDIT_PREFIX)/lib/libedit.dylib"
-  make -j ($ctx.nproc) sqlite3_LDADD=$ldadd
-  make install sqlite3_LDADD=$ldadd DESTDIR=($ctx.package_dir)
+  # configure bakes the shell's readline libs into the Makefile as `-ledit -ltinfo`, and libtool
+  # rewrites a bare `-ledit` to a full *host* path from its own search (ignoring our -L). Patch the
+  # generated Makefile to link the managed libedit by absolute path (libtool honors a path verbatim)
+  # and drop `-ltinfo` — macOS has no libtinfo, and the managed libedit dylib self-contains ncursesw.
+  sed -i $"s|-ledit|($env.LIBEDIT_PREFIX)/lib/libedit.dylib|g; s| -ltinfo||g" Makefile
+  make -j ($ctx.nproc)
+  make install DESTDIR=($ctx.package_dir)
 }
