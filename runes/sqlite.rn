@@ -39,12 +39,11 @@ export def build [ctx] {
   $env.CPPFLAGS = $"-I($env.LIBEDIT_PREFIX)/include"
   $env.LDFLAGS = $"-L($env.LIBEDIT_PREFIX)/lib"
   ./configure --prefix=($ctx.prefix) --enable-static --disable-shared --with-pic --enable-editline --disable-dependency-tracking
-  # configure computes the shell's readline libs as `-ledit -ltinfo` (a Linux pattern: ncurses splits
-  # off libtinfo there) and substitutes them straight into `sqlite3_LDADD`. macOS has no libtinfo, so
-  # that resolves to host libs. Override sqlite3_LDADD directly (READLINE_LIBS is baked in, not
-  # referenced) with the managed libedit alone — it's shared and self-contains ncursesw, so no
-  # separate terminfo lib is needed and no host link is pulled. EXTRA_SHELL_OBJ is empty in this
-  # default build, so nothing else is lost.
-  make -j ($ctx.nproc) sqlite3_LDADD=$"-L($env.LIBEDIT_PREFIX)/lib -ledit"
+  # KNOWN WART: the sqlite3 CLI links host /usr/lib/libedit. configure computes its readline libs as
+  # `-ledit -ltinfo` (a Linux pattern) and libtool rewrites `-ledit` to a full host path from its own
+  # search, ignoring our -L and the managed libedit. libsqlite3 itself (what Python's sqlite3 module
+  # links) is clean; only the interactive shell is affected. TODO: feed libtool the managed libedit by
+  # full path, or build managed libtinfo, rather than disabling editline.
+  make -j ($ctx.nproc)
   make install DESTDIR=($ctx.package_dir)
 }
