@@ -16,7 +16,7 @@ export const package = {
   }
 
   deps: {
-    build: { default: ["gmake" "zlib"] }
+    build: { default: ["gmake" "zlib" "libiconv"] }
     runtime: []
   }
 }

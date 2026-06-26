@@ -1,0 +1,37 @@
+export const package = {
+  name: "libiconv"
+  version: "1.18"
+  summary: "GNU libiconv: character-set conversion library"
+  homepage: "https://www.gnu.org/software/libiconv/"
+  license: "LGPL-2.1-or-later"
+
+  # macOS keeps iconv out of libc (it lives in host /usr/lib/libiconv), so a C program built here
+  # that does charset conversion (libxml2, …) leaks a host link. GNU libiconv gives those builds a
+  # managed, store-resident iconv to compile and link against instead. Lives in core: a core package
+  # (libxml2 -> llvm) links it, and core cannot depend on world.
+  #
+  # Scope: this redirects only *source builds* compiled against this header (they pick up GNU's
+  # libiconv_* symbols). Prebuilt Rust crates compiled against the SDK's plain iconv_* are a separate
+  # problem — a managed GNU libiconv cannot satisfy their `-liconv`.
+  sources: {
+    main: {
+      url: "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.18.tar.gz"
+      sha256: "sha256:3b08f5f4f9b4eb82f151a7040bfd6fe6c6fb922efe4b1659c66ea933276965e8"
+    }
+  }
+
+  # Static, like zlib: consumers link libiconv.a at build time and carry no runtime reference.
+  deps: {
+    build: { default: ["gmake"] }
+    runtime: []
+  }
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join "libiconv-1.18")
+  cd $source_dir
+  $env.CFLAGS = "-O2"
+  ./configure --prefix=($ctx.prefix) --enable-static --disable-shared --disable-dependency-tracking
+  make -j ($ctx.nproc)
+  make install DESTDIR=($ctx.package_dir)
+}
