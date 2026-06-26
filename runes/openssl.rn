@@ -29,17 +29,18 @@ export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "openssl-3.5.7")
   cd $source_dir
   # ./config execs `perl ./Configure`; perl is a declared build dep so it resolves from the store
-  # PATH even under --hermetic (no host /usr/bin tail).
+  # PATH even under --hermetic (no host /usr/bin tail). Docs are built and shipped — perl's pod2man
+  # (a core perl tool) is on the build PATH from that dep, so the man pages need no host toolchain.
   # --libdir=lib pins the layout (openssl picks lib64 on some 64-bit Linux); openssldir stays in the
-  # store prefix for self-containment. no-docs/no-tests skip the perl man toolchain and test progs.
+  # store prefix for self-containment. no-tests skips the test programs (not a shipped artifact).
   #
   # darwin hardcodes `ranlib -c` (Apple's keep-common-symbols flag), which the managed llvm-ranlib
   # rejects. Configure honors a RANLIB override, so point it at plain ranlib — llvm-ar already writes
   # an index, so dropping -c is safe.
   $env.RANLIB = "ranlib"
-  ./config --prefix=($ctx.prefix) --libdir=lib --openssldir=($ctx.prefix | path join "ssl") no-docs no-tests
+  ./config --prefix=($ctx.prefix) --libdir=lib --openssldir=($ctx.prefix | path join "ssl") no-tests
   make -j ($ctx.nproc)
-  # install_sw = libs/headers/CLI; install_ssldirs = openssldir with default openssl.cnf. Together
-  # they skip install_docs (we built none).
-  make install_sw install_ssldirs DESTDIR=($ctx.package_dir)
+  # install_sw = libs/headers/CLI; install_ssldirs = openssldir with default openssl.cnf;
+  # install_docs = the man pages built above.
+  make install_sw install_ssldirs install_docs DESTDIR=($ctx.package_dir)
 }
