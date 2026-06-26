@@ -43,8 +43,9 @@ export const package = {
   ]
 
   # clang invokes lld and the llvm bin tools, which live in the parent package — a genuine runtime
-  # dep, not just build-time.
+  # dep, not just build-time. libedit (macOS only): clang-repl links the managed libedit.dylib by
+  # store path, so it must be in clang's runtime closure (ncurses rides along via libedit).
   deps: {
-    runtime: ["llvm"]
+    runtime: ["llvm" "libedit[macos-*]"]
   }
 }

@@ -17,9 +17,12 @@ export const package = {
     }
   }
 
-  # cmake (Makefile generator → gmake) and python3 are needed for a pure-managed build.
+  # cmake (Makefile generator → gmake) and python3 are needed for a pure-managed build. libedit
+  # (macOS only): clang-repl's line editor links it; without the managed copy LLVM finds the SDK's
+  # /usr/lib/libedit and bakes a host link. Linux musl has no host libedit, so clang-repl builds
+  # without it there — no leak to fix. The clang package carries the matching runtime dep.
   deps: {
-    build: { default: ["cmake" "gmake" "python3-minimal" "libcxx[linux-*-musl]"] }
+    build: { default: ["cmake" "gmake" "python3-minimal" "libedit[macos-*]" "libcxx[linux-*-musl]"] }
     runtime: []
   }
 
