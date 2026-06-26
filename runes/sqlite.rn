@@ -1,0 +1,36 @@
+export const package = {
+  name: "sqlite"
+  version: "3.47.2"
+  summary: "SQLite — self-contained SQL database engine (libsqlite3 + shell)"
+  homepage: "https://sqlite.org/"
+  license: "blessing"
+
+  # Core: python3 (core) links libsqlite3 for the sqlite3 module, and a core rune cannot depend on
+  # world. The version is the SQLite release encoded as semver (3.47.2); the autoconf tarball uses
+  # its own digit form (3470200).
+  sources: {
+    main: {
+      url: "https://sqlite.org/2024/sqlite-autoconf-3470200.tar.gz"
+      sha256: "sha256:f1b2ee412c28d7472bc95ba996368d6f0cdcf00362affdadb27ed286c179540b"
+    }
+  }
+
+  # Static + PIC: libsqlite3.a links into Python's _sqlite3.so; build dep, no runtime reference.
+  deps: {
+    build: { default: ["gmake"] }
+    runtime: []
+  }
+
+  bins: {
+    default: { sqlite3: "bin/sqlite3" }
+  }
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join "sqlite-autoconf-3470200")
+  cd $source_dir
+  $env.CFLAGS = "-O2"
+  ./configure --prefix=($ctx.prefix) --enable-static --disable-shared --with-pic --disable-dependency-tracking
+  make -j ($ctx.nproc)
+  make install DESTDIR=($ctx.package_dir)
+}

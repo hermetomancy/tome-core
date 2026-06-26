@@ -1,0 +1,45 @@
+export const package = {
+  name: "bzip2"
+  version: "1.0.8"
+  summary: "Block-sorting compression library and tools"
+  homepage: "https://sourceware.org/bzip2/"
+  license: "bzip2-1.0.6"
+
+  sources: {
+    main: {
+      url: "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"
+      sha256: "sha256:ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
+    }
+  }
+
+  # Static-only (libbz2.a), like zlib: build dep for consumers, no runtime reference.
+  deps: {
+    build: { default: ["gmake"] }
+    runtime: []
+  }
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join "bzip2-1.0.8")
+  cd $source_dir
+  # No configure script; the Makefile hardcodes CC=gcc, so point it at the managed
+  # boundary explicitly. `make` also runs the self-test. Install lays out bin/lib/include
+  # directly under PREFIX (no DESTDIR support). The default CFLAGS carry `-g`, which
+  # bakes the temp build dir into debug info (purity lint) — override without it. -fPIC so
+  # libbz2.a can link into Python's _bz2.so (a shared module).
+  make -j ($ctx.nproc) CC=cc AR=ar RANLIB=ranlib CFLAGS="-Wall -O2 -fPIC -D_FILE_OFFSET_BITS=64"
+  make install PREFIX=($ctx.package_dir)
+
+  # The Makefile creates its convenience symlinks (bzcmp -> bzdiff, ...) with absolute
+  # PREFIX paths — pointing into the build's temp dir. Re-link them relative.
+  cd ($ctx.package_dir | path join "bin")
+  ^ln -sf bzdiff bzcmp
+  ^ln -sf bzgrep bzegrep
+  ^ln -sf bzgrep bzfgrep
+  ^ln -sf bzmore bzless
+  # Move man/ under share/ where profiles look (the man-page aliases are `.so` stub
+  # files with relative references, so they survive the move).
+  cd $ctx.package_dir
+  mkdir share
+  mv man share/man
+}

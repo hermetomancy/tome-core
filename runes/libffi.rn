@@ -1,0 +1,33 @@
+export const package = {
+  name: "libffi"
+  version: "3.4.6"
+  summary: "Foreign Function Interface library — backs Python's ctypes"
+  homepage: "https://sourceware.org/libffi/"
+  license: "MIT"
+
+  # Core: python3 (core) links it for the _ctypes module, and a core rune cannot depend on world.
+  # macOS ships /usr/lib/libffi, so without the managed copy a hermetic build would leak that host
+  # link; the managed lib on LIBRARY_PATH wins instead.
+  sources: {
+    main: {
+      url: "https://github.com/libffi/libffi/releases/download/v3.4.6/libffi-3.4.6.tar.gz"
+      sha256: "sha256:b0dea9df23c863a7a50e825440f3ebffabd65df1497108e5d437747843895a4e"
+    }
+  }
+
+  # Static + PIC: linked into Python's _ctypes.so (a shared module), so it needs position-independent
+  # code but leaves no runtime reference — a build dep only.
+  deps: {
+    build: { default: ["gmake"] }
+    runtime: []
+  }
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join "libffi-3.4.6")
+  cd $source_dir
+  $env.CFLAGS = "-O2"
+  ./configure --prefix=($ctx.prefix) --enable-static --disable-shared --with-pic --disable-dependency-tracking
+  make -j ($ctx.nproc)
+  make install DESTDIR=($ctx.package_dir)
+}
