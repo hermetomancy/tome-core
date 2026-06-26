@@ -11,11 +11,12 @@ export const package = {
     }
   }
 
-  # `make` drives bootstrap and build. Declared despite being POSIX: the self-hosted
-  # userland floor (uutils/dash/mawk/gsed/ggrep) ships no make.
+  # `make` drives bootstrap and build (the self-hosted userland floor ships no make). openssl and
+  # ncurses back cmake's upstream-default features — TLS downloads and the ccmake UI — which we
+  # enable with the managed libs rather than disable to dodge a link.
   deps: {
-    build: { default: ["gmake"] }
-    runtime: []
+    build: { default: ["gmake" "openssl" "ncurses"] }
+    runtime: ["openssl" "ncurses"]
   }
 }
 
@@ -25,21 +26,14 @@ export def build [ctx] {
   cd $source_dir
   # Without --parallel, bootstrap compiles its temporary mini-cmake serially.
   #
-  # --no-system-libs: link cmake's bundled zlib/curl/etc. instead of probing the host. macOS
-  # otherwise defaults to --system-curl and drags in host libcurl -> libz (undeclared host linkage
-  # the hermetic model forbids); Linux already builds bundled. Pulling the host libs is not an
-  # option — their managed equivalents (curl -> openssl + ca-certificates) live in tome-world, and a
-  # tome-core rune cannot depend on tome-world without inverting the bootstrap layering.
-  #
-  # -DCMAKE_USE_OPENSSL=OFF: bundled cmcurl defaults CMAKE_USE_OPENSSL=ON and hard-fails probing the
-  # host for OpenSSL (the auto-detection the sandbox forbids, AGENTS.md §5.3). cmake needs TLS only
-  # for file(DOWNLOAD https)/ctest, which a hermetic build never exercises, so disable it rather than
-  # pull openssl into the closure.
-  #
-  # -DBUILD_CursesDialog=OFF: ccmake is the sole ncurses consumer, and the interactive TUI is never
-  # used by build machinery — dropping it removes the last host-library link. Everything after `--`
-  # is forwarded to configure.
-  ./bootstrap --prefix=($ctx.prefix) --parallel=($nproc) --no-system-libs -- -DCMAKE_USE_OPENSSL=OFF -DBUILD_CursesDialog=OFF
+  # --no-system-libs: build cmake's bundled zlib/curl/expat/etc. The managed curl lives in tome-world
+  # and a core rune cannot depend on it (layering), so cmake uses its vendored cmcurl/cmzlib. Its
+  # other upstream-default features are enabled with managed libs rather than disabled to dodge a
+  # link: cmcurl's TLS links the core openssl (CMAKE_USE_OPENSSL auto-ON for bundled curl) and
+  # ccmake's UI links the core ncurses (BUILD_CursesDialog auto-ON when curses is found). Declaring
+  # openssl/ncurses puts them on CMAKE_PREFIX_PATH so cmake's own probes find the managed copies
+  # instead of the host /usr/lib ones.
+  ./bootstrap --prefix=($ctx.prefix) --parallel=($nproc) --no-system-libs
   make -j($nproc)
   make install DESTDIR=($ctx.package_dir)
 }
