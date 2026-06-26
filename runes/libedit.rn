@@ -18,9 +18,12 @@ export const package = {
     }
   }
 
-  # Static-only, like zlib/ncurses: consumers link libedit.a (+ libncursesw.a) at build time.
-  # ncurses is also a runtime dep — ncursesw bakes its store terminfo path, which the consumer
-  # carries (see ncurses.rn).
+  # Shared (the openssl pattern, not zlib's static): libedit depends on ncursesw, and a static
+  # libedit.a would leave those symbols for each consumer to resolve — which LLVM's `-ledit` link
+  # does not do. A shared libedit.dylib instead links ncursesw into itself (static, since ncurses is
+  # static-only) and carries a store-path install name, so clang-repl links one `-ledit` against the
+  # managed dylib. That makes libedit a build AND runtime dep of its consumers; ncurses rides along
+  # as a runtime dep for the terminfo database its baked path points at (see ncurses.rn).
   deps: {
     build: { default: ["gmake" "ncurses"] }
     runtime: ["ncurses"]
@@ -31,11 +34,12 @@ export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "libedit-20240808-3.1")
   cd $source_dir
   # drop autoconf's default -g for purity. libedit's tgetent probe searches termcap/ncurses/curses
-  # but not the wide ncursesw; preset LIBS so the link test resolves tgetent from the managed widec
-  # library (its headers/lib come from the ncurses build dep's CPATH/LIBRARY_PATH).
+  # but not the wide ncursesw; preset LIBS so the link test (and the shared lib) resolve tgetent from
+  # the managed widec library (headers/lib come from the ncurses build dep's CPATH/LIBRARY_PATH).
+  # Shared, not static: the dylib links ncursesw into itself so consumers need only `-ledit`.
   $env.CFLAGS = "-O2"
   $env.LIBS = "-lncursesw"
-  ./configure --prefix=($ctx.prefix) --enable-static --disable-shared --disable-dependency-tracking
+  ./configure --prefix=($ctx.prefix) --enable-shared --disable-static --disable-dependency-tracking
   make -j ($ctx.nproc)
   make install DESTDIR=($ctx.package_dir)
 }
