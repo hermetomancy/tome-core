@@ -16,11 +16,12 @@ export const package = {
   }
 
   # libsqlite3.a is static+PIC (links into Python's _sqlite3.so — build dep, no runtime ref). The
-  # sqlite3 CLI auto-links zlib (the .archive command) and libedit (line editing); declare both so
-  # they resolve to the managed copies instead of host /usr/lib. libedit is the CLI's shared runtime
-  # dep (it self-contains ncurses, so no separate host libncurses either); zlib links static.
+  # sqlite3 CLI links zlib (the .archive command) and libedit (line editing); declare both so they
+  # resolve to the managed copies instead of host /usr/lib. ncurses is here only to shim a libtinfo
+  # for the editline probe (see build). libedit is the CLI's shared runtime dep (self-contains
+  # ncursesw, so no separate host libncurses); zlib links static.
   deps: {
-    build: { default: ["gmake" "zlib" "libedit"] }
+    build: { default: ["gmake" "zlib" "libedit" "ncurses"] }
     runtime: ["libedit"]
   }
 
@@ -33,17 +34,19 @@ export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "sqlite-autoconf-3470200")
   cd $source_dir
   $env.CFLAGS = "-O2"
-  # The editline probe links plain `-ledit` and grabs host /usr/lib/libedit despite the managed lib
-  # being on LIBRARY_PATH. Point CPPFLAGS/LDFLAGS at the managed libedit explicitly so its header and
-  # lib win, and force --enable-editline so the shell builds with line editing against it.
+  # The editline probe links `-ledit -ltinfo`; macOS ncurses ships no separate libtinfo, so the probe
+  # fails and sqlite silently falls back to host `-lreadline` (a macOS alias to libedit). Shim a
+  # libtinfo -> the managed widec ncurses so the probe passes against the managed libedit, and
+  # --disable-readline removes the host fallback entirely.
+  mkdir tinfo-shim
+  ^ln -sf $"($env.NCURSES_PREFIX)/lib/libncursesw.a" tinfo-shim/libtinfo.a
   $env.CPPFLAGS = $"-I($env.LIBEDIT_PREFIX)/include"
-  $env.LDFLAGS = $"-L($env.LIBEDIT_PREFIX)/lib"
-  ./configure --prefix=($ctx.prefix) --enable-static --disable-shared --with-pic --enable-editline --disable-dependency-tracking
-  # configure bakes the shell's readline libs into the Makefile as `-ledit -ltinfo`, and libtool
-  # rewrites a bare `-ledit` to a full *host* path from its own search (ignoring our -L). Patch the
-  # generated Makefile to link the managed libedit by absolute path (libtool honors a path verbatim)
-  # and drop `-ltinfo` — macOS has no libtinfo, and the managed libedit dylib self-contains ncursesw.
-  sed -i $"s|-ledit|($env.LIBEDIT_PREFIX)/lib/libedit.dylib|g; s| -ltinfo||g" Makefile
+  $env.LDFLAGS = $"-L($env.LIBEDIT_PREFIX)/lib -L($source_dir)/tinfo-shim"
+  ./configure --prefix=($ctx.prefix) --enable-static --disable-shared --with-pic --enable-editline --disable-readline --disable-dependency-tracking
+  # libtool rewrites a bare `-ledit` to a host path from its own search; patch the Makefile to link
+  # the managed libedit by absolute path (honored verbatim) and drop `-ltinfo` — the managed libedit
+  # dylib self-contains ncursesw, so no separate terminfo lib is needed at link time.
+  sed -i $"s|-ledit |($env.LIBEDIT_PREFIX)/lib/libedit.dylib |g; s| -ltinfo||g" Makefile
   make -j ($ctx.nproc)
   make install DESTDIR=($ctx.package_dir)
 }
