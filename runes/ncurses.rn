@@ -36,4 +36,10 @@ export def build [ctx] {
   ./configure --prefix=($ctx.prefix) --enable-widec --without-debug --without-ada --without-tests --with-default-terminfo-dir=($terminfo_dir) --with-terminfo-dirs=$"($terminfo_dir):/usr/share/terminfo:/lib/terminfo:/etc/terminfo"
   make -j ($ctx.nproc)
   make install DESTDIR=($ctx.package_dir)
+  # Consumers that probe for plain `-lncurses` (libedit, …) find nothing here — widec installs only
+  # libncursesw.a — and fall through to host /usr/lib/libncurses. Ship the conventional name as a
+  # compat symlink (Debian's libncurses-dev does the same), so `-lncurses` resolves to the managed
+  # widec lib. tgetent and the rest of the termcap/curses ABI are identical across the w suffix.
+  let lib = ($ctx.package_dir | path join ($ctx.prefix | str replace -r '^/' '') 'lib')
+  ^ln -s libncursesw.a ($lib | path join 'libncurses.a')
 }

@@ -33,14 +33,11 @@ export const package = {
 export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "libedit-20240808-3.1")
   cd $source_dir
-  # drop autoconf's default -g for purity. libedit's `AC_SEARCH_LIBS(tgetent, [termcap ncurses
-  # curses])` probe finds the HOST `-lncurses` (the linker still searches /usr/lib under --hermetic),
-  # leaking /usr/lib/libncurses into the dylib. Preset the cache var so the probe never runs and the
-  # link uses `-lncursesw`; the host has no libncursesw, so that resolves only to the managed static
-  # widec lib (headers/lib from the ncurses build dep's CPATH/LIBRARY_PATH). Shared, not static: the
-  # dylib links ncursesw into itself so consumers need only `-ledit`.
+  # drop autoconf's default -g for purity. libedit's `AC_CHECK_LIB(ncurses, tgetent)` probe links
+  # plain `-lncurses`; the ncurses build dep ships a libncurses.a -> libncursesw.a compat symlink so
+  # that resolves to the managed static widec lib (on LIBRARY_PATH) rather than host /usr/lib. Shared,
+  # not static: the dylib links ncursesw into itself so consumers need only `-ledit`.
   $env.CFLAGS = "-O2"
-  $env.ac_cv_search_tgetent = "-lncursesw"
   ./configure --prefix=($ctx.prefix) --enable-shared --disable-static --disable-dependency-tracking
   make -j ($ctx.nproc)
   make install DESTDIR=($ctx.package_dir)
