@@ -22,12 +22,14 @@ export const package = {
 export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "bzip2-1.0.8")
   cd $source_dir
-  # No configure script; the Makefile hardcodes CC=gcc, so point it at the managed
-  # boundary explicitly. `make` also runs the self-test. Install lays out bin/lib/include
-  # directly under PREFIX (no DESTDIR support). The default CFLAGS carry `-g`, which
-  # bakes the temp build dir into debug info (purity lint) — override without it. -fPIC so
-  # libbz2.a can link into Python's _bz2.so (a shared module).
-  make -j ($ctx.nproc) CC=cc AR=ar RANLIB=ranlib CFLAGS="-Wall -O2 -fPIC -D_FILE_OFFSET_BITS=64"
+  # No configure script; the Makefile hardcodes CC=gcc, so point it at the managed boundary
+  # explicitly. Build the library and tools as explicit targets rather than the default `all`, whose
+  # recipe runs a self-test through host `cmp` (gone under --hermetic; uutils ships no cmp). `install`
+  # depends only on the built binaries, not `all`, so it skips the test too. Install lays out
+  # bin/lib/include directly under PREFIX (no DESTDIR support). The default CFLAGS carry `-g`, which
+  # bakes the temp build dir into debug info (purity lint) — override without it. -fPIC so libbz2.a
+  # can link into Python's _bz2.so (a shared module).
+  make -j ($ctx.nproc) libbz2.a bzip2 bzip2recover CC=cc AR=ar RANLIB=ranlib CFLAGS="-Wall -O2 -fPIC -D_FILE_OFFSET_BITS=64"
   make install PREFIX=($ctx.package_dir)
 
   # The Makefile creates its convenience symlinks (bzcmp -> bzdiff, ...) with absolute

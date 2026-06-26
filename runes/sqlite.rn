@@ -15,10 +15,13 @@ export const package = {
     }
   }
 
-  # Static + PIC: libsqlite3.a links into Python's _sqlite3.so; build dep, no runtime reference.
+  # libsqlite3.a is static+PIC (links into Python's _sqlite3.so — build dep, no runtime ref). The
+  # sqlite3 CLI auto-links zlib (the .archive command) and libedit (line editing); declare both so
+  # they resolve to the managed copies instead of host /usr/lib. libedit is the CLI's shared runtime
+  # dep (it self-contains ncurses, so no separate host libncurses either); zlib links static.
   deps: {
-    build: { default: ["gmake"] }
-    runtime: []
+    build: { default: ["gmake" "zlib" "libedit"] }
+    runtime: ["libedit"]
   }
 
   bins: {
