@@ -28,15 +28,20 @@ export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "zstd-1.5.7")
   cd $source_dir
   # CMake over the raw Makefile: the Makefile needs `md5sum` (absent from sandbox PATH) and
-  # auto-probes host zlib/lzma/lz4. CMake's backend options all default OFF (no host lib
-  # linked), Release gives -O3 -DNDEBUG, and programs link the static libzstd by default.
+  # auto-probes host zlib/lzma/lz4. CMake's backend options all default OFF (no host lib linked),
+  # Release gives -O3 -DNDEBUG.
+  #
+  # ZSTD_BUILD_SHARED=OFF: ship only libzstd.a. zstd's cmake otherwise builds a libzstd.1.dylib with
+  # a RELATIVE install name (`libzstd.1.dylib`, not the store path); LLVM's find_package(zstd) then
+  # links that dylib and its tablegen tools abort at runtime ("libzstd.1.dylib: no such file"). Static
+  # links the symbols straight in — and llvm-config --system-libs reports a path rustc can resolve.
   #
   # CMake compiles with ABSOLUTE source paths, so __FILE__ bakes the temp build dir into the
   # binary (purity lint catches it even without -g). -ffile-prefix-map rewrites them to a
   # stable prefix (C analog of --remap-path-prefix); map both the source tree and work dir.
   let build_dir = ($ctx.work_dir | path join "zstd-build")
   let remap = $"-ffile-prefix-map=($source_dir)=zstd -ffile-prefix-map=($ctx.work_dir)=build"
-  cmake -S build/cmake -B ($build_dir) -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DZSTD_BUILD_TESTS=OFF $"-DCMAKE_C_FLAGS=($remap)"
+  cmake -S build/cmake -B ($build_dir) -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DZSTD_BUILD_TESTS=OFF -DZSTD_BUILD_SHARED=OFF $"-DCMAKE_C_FLAGS=($remap)"
   cmake --build ($build_dir) --parallel ($ctx.nproc)
   cmake --install ($build_dir) --prefix ($ctx.package_dir)
 }
