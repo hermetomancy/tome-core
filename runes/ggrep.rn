@@ -2,8 +2,10 @@ export const package = {
   name: "ggrep"
   version: "3.12"
   summary: "GNU grep — the build floor's grep (the GNU text-processing pair with gsed)"
-  homepage: "https://www.gnu.org/software/grep/"
-  license: "GPL-3.0-or-later"
+  meta: {
+    homepage: "https://www.gnu.org/software/grep/"
+    license: "GPL-3.0-or-later"
+  }
 
   # GNU grep under its implementation name, shipping both command names (the gsed pattern,
   # rune-authoring.md "Naming rule"): `grep` is the generic capability, `ggrep` states GNU

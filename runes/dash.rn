@@ -2,8 +2,10 @@ export const package = {
   name: "dash"
   version: "0.5.12"
   summary: "DASH: a small, strictly-POSIX shell — the managed build floor's /bin/sh"
-  homepage: "http://gondor.apana.org.au/~herbert/dash/"
-  license: "BSD-3-Clause"
+  meta: {
+    homepage: "http://gondor.apana.org.au/~herbert/dash/"
+    license: "BSD-3-Clause"
+  }
 
   # The configure-grade POSIX shell for the managed build floor. autoconf re-execs itself under a
   # POSIX `sh` found on PATH; the host `/usr/bin` tail used to supply it, so dropping that tail

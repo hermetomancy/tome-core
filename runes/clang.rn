@@ -2,8 +2,10 @@ export const package = {
   name: "clang"
   version: "22.1.7"
   summary: "Clang C/C++ compiler"
-  homepage: "https://clang.llvm.org/"
-  license: "Apache-2.0 WITH LLVM-exception"
+  meta: {
+    homepage: "https://clang.llvm.org/"
+    license: "Apache-2.0 WITH LLVM-exception"
+  }
 
   # build_only: the compiler is build machinery, reached by the cc/c++ wrappers (and clang's own
   # driver) via store path, never by users via PATH. Pinned in the store but kept off the active

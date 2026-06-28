@@ -2,8 +2,10 @@ export const package = {
   name: "musl"
   version: "1.2.6"
   summary: "musl libc"
-  homepage: "https://musl.libc.org/"
-  license: "MIT"
+  meta: {
+    homepage: "https://musl.libc.org/"
+    license: "MIT"
+  }
   targets: ["linux-x86_64-musl" "linux-aarch64-musl" "linux-x86_64-gnu" "linux-aarch64-gnu"]
 
   sources: {
@@ -34,9 +36,14 @@ export def build [ctx] {
   # place — musl builds freestanding against its own headers.)
   $env.LDFLAGS = ""
   # libc.so links -nostdlib; musl appends its compiler runtime ($LIBCC) by hand for the long-double
-  # soft-float helpers its math pulls. musl auto-detects libgcc, absent here, leaving LIBCC empty
-  # and failing the link; pin it to the managed clang's compiler-rt builtins archive.
-  let libcc = (^cc --rtlib=compiler-rt -print-libgcc-file-name | str trim)
+  # soft-float helpers its math pulls. With clang, musl's libgcc probe comes up empty unless we ask
+  # for compiler-rt explicitly; with gcc, the plain libgcc path is the correct runtime.
+  let cc_banner = (^cc --version | lines | first)
+  let libcc = if ($cc_banner | str contains "clang") {
+    (^cc --rtlib=compiler-rt -print-libgcc-file-name | str trim)
+  } else {
+    (^cc -print-libgcc-file-name | str trim)
+  }
   ./configure --prefix=($ctx.prefix) --syslibdir=($ctx.prefix | path join "lib")
   make -j ($nproc) $"LIBCC=($libcc)"
   make install DESTDIR=($ctx.package_dir) $"LIBCC=($libcc)"

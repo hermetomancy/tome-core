@@ -2,8 +2,10 @@ export const package = {
   name: "zstd"
   version: "1.5.7"
   summary: "Zstandard — fast real-time compression algorithm and CLI"
-  homepage: "https://facebook.github.io/zstd/"
-  license: "BSD-3-Clause"
+  meta: {
+    homepage: "https://facebook.github.io/zstd/"
+    license: "BSD-3-Clause"
+  }
 
   sources: {
     main: {

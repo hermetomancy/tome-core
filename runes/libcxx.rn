@@ -2,8 +2,10 @@ export const package = {
   name: "libcxx"
   version: "22.1.7"
   summary: "LLVM C++ runtime for musl (libc++, libc++abi, libunwind) — the stage-1 C++ standard library that lets the toolchain itself build against musl"
-  homepage: "https://libcxx.llvm.org/"
-  license: "Apache-2.0 WITH LLVM-exception"
+  meta: {
+    homepage: "https://libcxx.llvm.org/"
+    license: "Apache-2.0 WITH LLVM-exception"
+  }
 
   # Linux/musl only: macOS gets its C++ stdlib from the platform SDK; this fills musl's gap.
   targets: ["linux-x86_64-musl" "linux-aarch64-musl"]

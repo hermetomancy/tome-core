@@ -2,8 +2,10 @@ export const package = {
   name: "zlib"
   version: "1.3.2"
   summary: "General-purpose lossless compression library"
-  homepage: "https://zlib.net/"
-  license: "Zlib"
+  meta: {
+    homepage: "https://zlib.net/"
+    license: "Zlib"
+  }
 
   sources: {
     main: {

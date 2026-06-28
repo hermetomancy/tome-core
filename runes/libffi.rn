@@ -2,8 +2,10 @@ export const package = {
   name: "libffi"
   version: "3.6.0"
   summary: "Foreign Function Interface library — backs Python's ctypes"
-  homepage: "https://sourceware.org/libffi/"
-  license: "MIT"
+  meta: {
+    homepage: "https://sourceware.org/libffi/"
+    license: "MIT"
+  }
 
   # Core: python3 (core) links it for the _ctypes module, and a core rune cannot depend on world.
   # macOS ships /usr/lib/libffi, so without the managed copy a hermetic build would leak that host

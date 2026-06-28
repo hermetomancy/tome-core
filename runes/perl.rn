@@ -2,8 +2,10 @@ export const package = {
   name: "perl"
   version: "5.40.2"
   summary: "Perl 5: the build-time interpreter that configure scripts reach for (openssl, git)"
-  homepage: "https://www.perl.org/"
-  license: "Artistic-1.0-Perl OR GPL-1.0-or-later"
+  meta: {
+    homepage: "https://www.perl.org/"
+    license: "Artistic-1.0-Perl OR GPL-1.0-or-later"
+  }
 
   # Not part of the always-on core floor: only a couple of runes need perl at build time
   # (openssl's `Configure`, git's build scripts), so it is a declared build dep of those, not

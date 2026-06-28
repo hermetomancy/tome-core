@@ -2,8 +2,10 @@ export const package = {
   name: "xz"
   version: "5.6.3"
   summary: "XZ Utils — liblzma compression library and the xz CLI"
-  homepage: "https://tukaani.org/xz/"
-  license: "0BSD AND LGPL-2.1-or-later AND GPL-2.0-or-later"
+  meta: {
+    homepage: "https://tukaani.org/xz/"
+    license: "0BSD AND LGPL-2.1-or-later AND GPL-2.0-or-later"
+  }
 
   # Core: python3 (core) links liblzma for the _lzma module, and a core rune cannot depend on world.
   #

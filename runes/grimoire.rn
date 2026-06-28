@@ -23,8 +23,10 @@ export const package = {
   name: "grimoire"
   version: "0.1.0-dev.20260623.5"
   summary: "Grimoire itself: the grm package manager, built from source"
-  homepage: "https://github.com/hermetomancy/grimoire"
-  license: "MIT"
+  meta: {
+    homepage: "https://github.com/hermetomancy/grimoire"
+    license: "MIT"
+  }
 
   sources: {
     main: {

@@ -2,8 +2,10 @@ export const package = {
   name: "sqlite"
   version: "3.47.2"
   summary: "SQLite — self-contained SQL database engine (libsqlite3 + shell)"
-  homepage: "https://sqlite.org/"
-  license: "blessing"
+  meta: {
+    homepage: "https://sqlite.org/"
+    license: "blessing"
+  }
 
   # Core: python3 (core) links libsqlite3 for the sqlite3 module, and a core rune cannot depend on
   # world. The version is the SQLite release encoded as semver (3.47.2); the autoconf tarball uses

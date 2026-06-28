@@ -2,8 +2,10 @@ export const package = {
   name: "build-env"
   version: "0.1.0"
   summary: "Meta-package: the managed build environment's toolchain, in one install"
-  homepage: "https://grimoire.mchal.lol/"
-  license: "MIT"
+  meta: {
+    homepage: "https://grimoire.mchal.lol/"
+    license: "MIT"
+  }
   sources: {}
 
   # build_only: the toolchain is pinned in the store (kept across `grm clean`, available to source

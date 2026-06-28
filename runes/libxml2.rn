@@ -2,8 +2,10 @@ export const package = {
   name: "libxml2"
   version: "2.13.5"
   summary: "GNOME XML parsing and toolkit library (libxml2)"
-  homepage: "https://gitlab.gnome.org/GNOME/libxml2"
-  license: "MIT"
+  meta: {
+    homepage: "https://gitlab.gnome.org/GNOME/libxml2"
+    license: "MIT"
+  }
 
   # Lives in tome-core: the managed llvm links libxml2 (LLVM_ENABLE_LIBXML2 — XML manifest/remark
   # handling), and a core rune cannot depend on a world package. zlib (core) backs libxml2's

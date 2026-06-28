@@ -2,8 +2,10 @@ export const package = {
   name: "libiconv"
   version: "1.18"
   summary: "GNU libiconv: character-set conversion library"
-  homepage: "https://www.gnu.org/software/libiconv/"
-  license: "LGPL-2.1-or-later"
+  meta: {
+    homepage: "https://www.gnu.org/software/libiconv/"
+    license: "LGPL-2.1-or-later"
+  }
 
   # macOS keeps iconv out of libc (it lives in host /usr/lib/libiconv), so a C program built here
   # that does charset conversion (libxml2, …) leaks a host link. GNU libiconv gives those builds a

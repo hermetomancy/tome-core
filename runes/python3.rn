@@ -2,8 +2,10 @@ export const package = {
   name: "python3"
   version: "3.14.6"
   summary: "Python 3: the interpreter and full standard library"
-  homepage: "https://www.python.org/"
-  license: "PSF-2.0"
+  meta: {
+    homepage: "https://www.python.org/"
+    license: "PSF-2.0"
+  }
 
   # Supersedes the bootstrap-only python3-minimal: a single full interpreter serves both the
   # toolchain bootstrap (rust's x.py, LLVM) and user use. Every optional stdlib module's backing

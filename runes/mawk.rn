@@ -2,8 +2,10 @@ export const package = {
   name: "mawk"
   version: "1.3.4-20260302"
   summary: "mawk: a fast, small POSIX awk — the managed build floor's awk"
-  homepage: "https://invisible-island.net/mawk/"
-  license: "GPL-2.0-only"
+  meta: {
+    homepage: "https://invisible-island.net/mawk/"
+    license: "GPL-2.0-only"
+  }
 
   # The floor's awk. configure scripts lean on awk heavily and neither toybox nor uutils ships one,
   # so a hermetic build needs a packaged awk. mawk is the lean, fast, non-GNU choice (Mike Brennan's

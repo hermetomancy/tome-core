@@ -2,8 +2,10 @@ export const package = {
   name: "ncurses"
   version: "6.5"
   summary: "Terminal control library (curses) with wide-character support"
-  homepage: "https://invisible-island.net/ncurses/"
-  license: "X11"
+  meta: {
+    homepage: "https://invisible-island.net/ncurses/"
+    license: "X11"
+  }
 
   # Lives in tome-core (not world): libedit — a core package the managed llvm links — needs ncursesw
   # for terminfo, and a core rune cannot depend on a world package. World consumers (pinentry, …)

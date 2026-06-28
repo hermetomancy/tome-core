@@ -2,8 +2,10 @@ export const package = {
   name: "toolchain-wrappers"
   version: "0.1.0"
   summary: "Compiler toolchain wrapper scripts delegating to managed LLVM tools"
-  homepage: "https://grimoire.mchal.lol/"
-  license: "MIT"
+  meta: {
+    homepage: "https://grimoire.mchal.lol/"
+    license: "MIT"
+  }
   sources: {}
 
   # clang/llvm are runtime deps (not just build): wrappers bake absolute store paths to their bins,
@@ -72,7 +74,8 @@ export def build [ctx] {
   # leaking glibc. --sysroot + -B point them at the managed musl. Placed before "$@" so a caller's
   # explicit --sysroot still wins. Drivers only (inert on llvm-* tools). Empty on macOS, where the
   # sysroot is the system SDK located at runtime (see sdk_preamble) rather than a baked path.
-  let driver_flags = if $is_macos { "" } else { $" --sysroot=($env.MUSL_PREFIX) -B($env.MUSL_PREFIX)/lib" }
+  let is_musl = ($ctx.target | str ends-with "-musl")
+  let driver_flags = if $is_musl { $" --sysroot=($env.MUSL_PREFIX) -B($env.MUSL_PREFIX)/lib" } else { "" }
   # The C++ drivers also need the managed libc++ — musl ships no C++ stdlib, so point clang at the
   # libcxx package's headers/libs (clang already defaults to -stdlib=libc++ via llvm.rn). -nostdinc++
   # drops clang's empty default C++ include dir; --unwindlib=libunwind matches the compiler-rt build
@@ -84,7 +87,6 @@ export def build [ctx] {
   # installed libc++ AND its fresh in-tree tree; they share `<string.h>`'s include guard, so the
   # installed one shadows the fresh `#include_next` and musl's C symbols never resolve. -nostdinc++
   # stays unconditional — the fresh in-tree headers supply the stdlib for that build.
-  let is_musl = ($ctx.target | str ends-with "-musl")
   let cxx_base = if $is_musl { " -nostdinc++" } else { "" }
   let cxx_libcxx = if $is_musl { $" -isystem ($env.LIBCXX_PREFIX)/include/c++/v1 -L($env.LIBCXX_PREFIX)/lib --unwindlib=libunwind" } else { "" }
   let drivers = ["cc" "c++" "gcc" "g++"]

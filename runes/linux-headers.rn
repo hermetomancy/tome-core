@@ -2,8 +2,10 @@ export const package = {
   name: "linux-headers"
   version: "6.12.93"
   summary: "Linux kernel headers"
-  homepage: "https://www.kernel.org/"
-  license: "GPL-2.0-only"
+  meta: {
+    homepage: "https://www.kernel.org/"
+    license: "GPL-2.0-only"
+  }
   targets: ["linux-x86_64-musl" "linux-aarch64-musl" "linux-x86_64-gnu" "linux-aarch64-gnu"]
 
   sources: {

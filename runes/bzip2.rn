@@ -2,8 +2,10 @@ export const package = {
   name: "bzip2"
   version: "1.0.8"
   summary: "Block-sorting compression library and tools"
-  homepage: "https://sourceware.org/bzip2/"
-  license: "bzip2-1.0.6"
+  meta: {
+    homepage: "https://sourceware.org/bzip2/"
+    license: "bzip2-1.0.6"
+  }
 
   sources: {
     main: {

@@ -2,8 +2,10 @@ export const package = {
   name: "cmake"
   version: "4.3.3"
   summary: "Cross-platform build system generator"
-  homepage: "https://cmake.org/"
-  license: "BSD-3-Clause"
+  meta: {
+    homepage: "https://cmake.org/"
+    license: "BSD-3-Clause"
+  }
   sources: {
     main: {
       url: "https://cmake.org/files/v4.3/cmake-4.3.3.tar.gz"

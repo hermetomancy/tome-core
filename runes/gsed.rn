@@ -2,8 +2,10 @@ export const package = {
   name: "gsed"
   version: "4.10"
   summary: "GNU sed, for hosts whose ambient sed is BSD"
-  homepage: "https://www.gnu.org/software/sed/"
-  license: "GPL-3.0-or-later"
+  meta: {
+    homepage: "https://www.gnu.org/software/sed/"
+    license: "GPL-3.0-or-later"
+  }
 
   # GNU sed under its implementation name, shipping both command names (the gawk/awk
   # pattern, rune-authoring.md "Naming rule"): `gsed` states GNU semantics explicitly,

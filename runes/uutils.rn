@@ -2,8 +2,10 @@ export const package = {
   name: "uutils"
   version: "0.9.0"
   summary: "uutils coreutils: a Rust, GNU-compatible coreutils — the managed build floor's coreutils"
-  homepage: "https://uutils.github.io/coreutils/"
-  license: "MIT"
+  meta: {
+    homepage: "https://uutils.github.io/coreutils/"
+    license: "MIT"
+  }
 
   # The floor's coreutils. toybox's set is deliberately minimal (no awk, tr, expr, sort, head, tail,
   # wc, basename, dirname, …) — too thin for autotools `configure`. uutils is the Rust, GNU-compatible

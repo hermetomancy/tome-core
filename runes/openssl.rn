@@ -2,8 +2,10 @@ export const package = {
   name: "openssl"
   version: "3.5.7"
   summary: "Toolkit for TLS/SSL and general-purpose cryptography"
-  homepage: "https://openssl-library.org/"
-  license: "Apache-2.0"
+  meta: {
+    homepage: "https://openssl-library.org/"
+    license: "Apache-2.0"
+  }
 
   sources: {
     main: {

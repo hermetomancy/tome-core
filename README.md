@@ -7,7 +7,7 @@ builds depend on instead of reaching for host tools. Add it with:
 grm tome add https://github.com/hermetomancy/tome-core --ref main
 ```
 
-(`grm setup` adds it automatically when no tome is configured.)
+(`grm setup --bootstrap` adds it automatically.)
 
 ## Packages
 
@@ -23,7 +23,8 @@ The managed toolchain, in bootstrap order:
   resource directory (`LLVM_ENABLE_RUNTIMES`).
 - `toolchain-wrappers` — the managed compiler boundary: `cc`/`c++`/`ar`/`ld`/… wrapper
   scripts baking absolute store paths to clang and llvm (its runtime deps).
-- `toybox` — the managed POSIX userland that shadows the host's coreutils in builds.
+- `dash`, `mawk`, `uutils`, `gsed`, `ggrep` — the managed POSIX userland floor that shadows
+  the host's shell, awk, coreutils, sed, and grep in builds.
 - `gsed` — GNU sed (bins `gsed` + `sed`), declared unconditionally by any build that
   needs GNU sed semantics — no host floor's sed flavor is assumable on any platform.
 - `openssl` — TLS/crypto library (libssl/libcrypto, static + shared). Lives in core because
@@ -70,6 +71,6 @@ the package host that `tome.rn` advertises, and sign the index
 ## Host floor
 
 The bootstrap leans on the host for exactly: a POSIX userland at `/usr/bin` + `/bin`
-(shadowed by toybox once built), a C compiler boundary (replaced by toolchain-wrappers
-once built), and on macOS the SDK (located via `xcrun`). Linking is fully managed —
+(shadowed by dash/mawk/uutils/gsed/ggrep once built), a C compiler boundary (replaced by
+toolchain-wrappers once built), and on macOS the SDK (located via `xcrun`). Linking is fully managed —
 ld64.lld on macOS, lld on Linux — so no host linker survives past bootstrap.

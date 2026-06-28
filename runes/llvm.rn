@@ -2,8 +2,10 @@ export const package = {
   name: "llvm"
   version: "22.1.7"
   summary: "LLVM compiler infrastructure"
-  homepage: "https://llvm.org/"
-  license: "Apache-2.0 WITH LLVM-exception"
+  meta: {
+    homepage: "https://llvm.org/"
+    license: "Apache-2.0 WITH LLVM-exception"
+  }
 
   # build_only: see clang.rn. The toolchain is reached by store path (the cc wrapper, clang's
   # driver), never needed on the user PATH; pinned in the store but off the active profile so its

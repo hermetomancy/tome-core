@@ -4,8 +4,10 @@ export const package = {
   # version 3.1 with the snapshot date as the patch. The tarball/source dir keep the upstream name.
   version: "3.1.20240808"
   summary: "BSD editline (libedit): line editing and history — the clang-repl line editor"
-  homepage: "https://www.thrysoee.dk/editline/"
-  license: "BSD-3-Clause"
+  meta: {
+    homepage: "https://www.thrysoee.dk/editline/"
+    license: "BSD-3-Clause"
+  }
 
   # Lives in tome-core (not world): the managed llvm's clang-repl links libedit, and a core rune
   # cannot depend on a world package. Packaged so clang-repl links the managed static libedit

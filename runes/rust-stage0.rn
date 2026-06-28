@@ -32,8 +32,10 @@ export const package = {
   name: "rust-stage0"
   version: "1.96.0"
   summary: "Official rustc/cargo binaries, repackaged to bootstrap the `rust` source build"
-  homepage: "https://www.rust-lang.org/"
-  license: "MIT OR Apache-2.0"
+  meta: {
+    homepage: "https://www.rust-lang.org/"
+    license: "MIT OR Apache-2.0"
+  }
   fixed_output: true
   targets: [
     "macos-aarch64-darwin"
