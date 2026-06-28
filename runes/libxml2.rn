@@ -15,8 +15,11 @@ export const package = {
     }
   }
 
+  # libiconv is macOS-only: there the managed GNU libiconv replaces the SDK's. On musl libxml2 links
+  # static and uses musl's built-in libc iconv, so no managed libiconv (its libiconv_* symbols would
+  # otherwise leak into every static consumer's link).
   deps: {
-    build: { default: ["gmake" "zlib" "libiconv"] }
+    build: { default: ["gmake" "zlib" "libiconv[macos-*]"] }
     runtime: []
   }
 }
@@ -28,7 +31,17 @@ export def build [ctx] {
   # only skips the language binding (a separate artifact), not a library feature. -O2 drops -g for
   # purity.
   $env.CFLAGS = "-O2"
-  ./configure --prefix=($ctx.prefix) --without-python --disable-dependency-tracking
+  # musl: build static (the store is static-first) so consumers link libxml2.a straight in. A shared
+  # libxml2.so would carry only a relative ELF soname — Linux has no store-path install_name, so the
+  # loader falls through to the host libxml2 (newer, missing legacy symbols), which is exactly what
+  # breaks the managed ld.lld at load time. With no managed GNU libiconv on the path, configure also
+  # picks up musl's built-in libc iconv, so no external -liconv is needed. macOS keeps the shared
+  # dylib: libtool bakes the absolute store path as its install_name (the store-path linkage there).
+  if ($ctx.target | str ends-with "-musl") {
+    ./configure --prefix=($ctx.prefix) --without-python --disable-dependency-tracking --disable-shared --enable-static
+  } else {
+    ./configure --prefix=($ctx.prefix) --without-python --disable-dependency-tracking
+  }
   make -j ($ctx.nproc)
   make install DESTDIR=($ctx.package_dir)
 }

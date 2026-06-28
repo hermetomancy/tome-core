@@ -19,14 +19,16 @@ export const package = {
 
   # cmake (Makefile generator → gmake) and python3 drive a pure-managed build. zlib/zstd/libxml2 back
   # LLVM's upstream-default features (compressed debug sections, zstd, XML) — enabled with managed
-  # libs, never disabled to dodge a host link. zlib/zstd link static (no runtime ref); libxml2 is the
-  # shared dylib, so it is a runtime dep too. libedit (macOS only): clang-repl's line editor links it;
+  # libs, never disabled to dodge a host link. zlib/zstd link static (no runtime ref) — and so does
+  # libxml2 on musl (the static-first store; a shared .so would resolve to host libxml2 for lack of a
+  # store-path soname). macOS keeps libxml2 a shared dylib, so it is a runtime dep there. libedit
+  # (macOS only): clang-repl's line editor links it;
   # without the managed copy LLVM finds the SDK's /usr/lib/libedit. Linux musl has no host libedit, so
   # clang-repl builds without it there. The clang package carries the matching libedit/libxml2 runtime
   # deps for its split-out binaries.
   deps: {
     build: { default: ["cmake" "gmake" "python3" "zlib" "zstd" "libxml2" "libedit[macos-*]" "libcxx[linux-*-musl]"] }
-    runtime: ["libxml2"]
+    runtime: ["libxml2[macos-*]"]
   }
 
 }
