@@ -52,11 +52,18 @@ export def build [ctx] {
     $env.ax_cv_c_float_words_bigendian = "no"
   }
 
-  # Full interpreter: ship ensurepip and the test modules, and build every optional module against
-  # the managed libs declared above. --with-openssl points _ssl/_hashlib at the managed openssl;
-  # --with-readline=editline uses the managed libedit; --with-system-ffi uses the managed libffi for
-  # _ctypes; zlib/bz2/lzma/sqlite/curses auto-detect from the deps' CPATH/LIBRARY_PATH.
-  ./configure --prefix=($ctx.prefix) --with-openssl=($env.OPENSSL_PREFIX) --with-readline=editline --with-system-ffi
+  # Full interpreter: ship ensurepip and build every optional module against the managed libs declared
+  # above. --with-openssl points _ssl/_hashlib at the managed openssl; --with-readline=editline uses
+  # the managed libedit; --with-system-ffi uses the managed libffi for _ctypes; zlib/bz2/lzma/sqlite/
+  # curses auto-detect from the deps' CPATH/LIBRARY_PATH.
+  #
+  # --disable-test-modules: the CPython test C-extensions (_testinternalcapi, _testcapi, …) are test
+  # scaffolding, not part of a packaged interpreter. They also break the musl static build — under
+  # MODULE_BUILDTYPE=static every module is compiled into the core, and _testinternalcapi references
+  # _Py_Get_Getpath_CodeObject, a frozen-getpath symbol that only exists after _freeze_module runs, so
+  # the freeze bootstrap's own link fails with an undefined symbol. Dropping them fixes the link and
+  # slims the install on every target.
+  ./configure --prefix=($ctx.prefix) --with-openssl=($env.OPENSSL_PREFIX) --with-readline=editline --with-system-ffi --disable-test-modules
   make -j($nproc)
   make install DESTDIR=($ctx.package_dir)
 }
