@@ -9,8 +9,8 @@ export const package = {
   sources: {}
 
   # build_only: the toolchain is pinned in the store (kept across `grm clean`, available to source
-  # builds) but never linked into the active profile — its bins (uutils/dash/mawk/gsed/ggrep, clang, cmake,
-  # python3, rustc, …) are build machinery, not user commands, so installing build-env does not flood
+  # builds) but never linked into the active profile — its bins (uutils/dash/mawk/gsed/ggrep/gtar,
+  # clang, cmake, python3, rustc, …) are build machinery, not user commands, so installing build-env does not flood
   # `profiles/current/bin`. Builds still find the toolchain via the build-dep PATH; this only keeps
   # it off the *user* PATH.
   build_only: true
@@ -42,8 +42,8 @@ export const package = {
       "cmake"
       "gmake"
       "python3"
-      # Userland floor (replaced toybox): a POSIX shell, awk, coreutils, sed, grep, find, cmp —
-      # enough for autotools configure without leaning on the host /usr/bin tail.
+      # Userland floor (replaced toybox): a POSIX shell, awk, coreutils, sed, grep, tar, find,
+      # cmp — enough for autotools configure without leaning on the host /usr/bin tail.
       "dash"
       "mawk"
       "uutils"
@@ -51,6 +51,7 @@ export const package = {
       "ggrep"
       "findutils"
       "diffutils"
+      "gtar"
       "linux-headers[linux]"
       "musl[linux]"
     ]

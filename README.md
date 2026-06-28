@@ -23,8 +23,8 @@ The managed toolchain, in bootstrap order:
   resource directory (`LLVM_ENABLE_RUNTIMES`).
 - `toolchain-wrappers` — the managed compiler boundary: `cc`/`c++`/`ar`/`ld`/… wrapper
   scripts baking absolute store paths to clang and llvm (its runtime deps).
-- `dash`, `mawk`, `uutils`, `gsed`, `ggrep` — the managed POSIX userland floor that shadows
-  the host's shell, awk, coreutils, sed, and grep in builds.
+- `dash`, `mawk`, `uutils`, `gsed`, `ggrep`, `gtar` — the managed POSIX userland floor that shadows
+  the host's shell, awk, coreutils, sed, grep, and tar in builds.
 - `gsed` — GNU sed (bins `gsed` + `sed`), declared unconditionally by any build that
   needs GNU sed semantics — no host floor's sed flavor is assumable on any platform.
 - `openssl` — TLS/crypto library (libssl/libcrypto, static + shared). Lives in core because

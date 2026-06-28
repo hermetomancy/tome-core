@@ -1,0 +1,35 @@
+export const package = {
+  name: "gtar"
+  version: "1.35"
+  summary: "GNU tar — the managed build floor's tar"
+  meta: {
+    homepage: "https://www.gnu.org/software/tar/"
+    license: "GPL-3.0-or-later"
+  }
+
+  # GNU tar under its implementation name, shipping both `gtar` and generic `tar`.
+  # The generic name is part of the managed POSIX-ish build floor; runes that require GNU-specific
+  # tar behavior should declare `gtar` explicitly.
+  sources: {
+    main: {
+      url: "https://ftp.gnu.org/gnu/tar/tar-1.35.tar.xz"
+      sha256: "sha256:4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16"
+    }
+  }
+
+  deps: {
+    build: { default: ["gmake"] }
+    runtime: []
+  }
+}
+
+export def build [ctx] {
+  let source_dir = ($ctx.sources.main.dir | path join "tar-1.35")
+  cd $source_dir
+  $env.CFLAGS = "-O2"
+  ./configure --prefix=($ctx.prefix) --disable-nls --disable-dependency-tracking
+  make -j ($ctx.nproc)
+  make install DESTDIR=($ctx.package_dir)
+  let bin = ($ctx.package_dir | path join ($ctx.prefix | str replace -r '^/' '') 'bin')
+  ^ln -s tar ($bin | path join 'gtar')
+}
