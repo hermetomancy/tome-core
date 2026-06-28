@@ -50,7 +50,12 @@ export def build [ctx] {
   # couldn't resolve — is moot now that zstd is the managed static lib in the closure: llvm-config
   # --system-libs reports a store path rustc can actually link.
   # COMPILER_RT_BUILD_* are left at upstream defaults (full sanitizers/xray/profile/…) on every OS,
-  # rather than disabled on Linux — packaging means shipping what upstream builds.
+  # rather than disabled on Linux — packaging means shipping what upstream builds. On musl that full
+  # set pulls in scudo, whose GWP-ASan backtraces need an unwinder; musl has no system libgcc_s and
+  # the runtimes build ships only compiler-rt, so scudo's configure aborts "No suitable unwinder
+  # library". Add libunwind to LLVM_ENABLE_RUNTIMES (static, the musl store default) so it builds the
+  # in-tree unwind target scudo links against. macOS gets its unwinder from the SDK, so it stays
+  # compiler-rt-only.
   # Darwin: pin compiler-rt to one arch + SKIP_CC_KEXT — multiple builtins arches race on the
   # shared outline-atomics rule under `make -j`; kext/i386 slices are dead weight. DARWIN_*
   # flags forward to the builtins sub-build.
@@ -101,7 +106,7 @@ export def build [ctx] {
   # to -lstdc++ — an unsatisfiable link on a pure-LLVM musl host. libcxx's store-path headers/libs
   # come from toolchain-wrappers' -isystem/-L on the C++ drivers.
   if ($darwin_arch | is-empty) {
-    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DCLANG_DEFAULT_RTLIB=compiler-rt -DCLANG_DEFAULT_UNWINDLIB=none -DCLANG_DEFAULT_CXX_STDLIB=libc++ -DLLVM_ENABLE_LIBCXX=ON -DLLVM_ENABLE_PIC=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_SHARED_LIBS=OFF -DLLVM_BUILD_LLVM_DYLIB=OFF -DLLVM_LINK_LLVM_DYLIB=OFF -DLLVM_BUILD_LLVM_C_DYLIB=OFF -DCLANG_LINK_CLANG_DYLIB=OFF -DLLVM_ENABLE_PLUGINS=OFF -DLLVM_INSTALL_UTILS=ON
+    cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES="compiler-rt;libunwind" -DLIBUNWIND_ENABLE_SHARED=OFF -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DCLANG_DEFAULT_RTLIB=compiler-rt -DCLANG_DEFAULT_UNWINDLIB=none -DCLANG_DEFAULT_CXX_STDLIB=libc++ -DLLVM_ENABLE_LIBCXX=ON -DLLVM_ENABLE_PIC=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_SHARED_LIBS=OFF -DLLVM_BUILD_LLVM_DYLIB=OFF -DLLVM_LINK_LLVM_DYLIB=OFF -DLLVM_BUILD_LLVM_C_DYLIB=OFF -DCLANG_LINK_CLANG_DYLIB=OFF -DLLVM_ENABLE_PLUGINS=OFF -DLLVM_INSTALL_UTILS=ON
   } else {
     let crt_args = $"-DCMAKE_LINKER=ld64.lld;-DDARWIN_macosx_OVERRIDE_SDK_VERSION=11.0;-DDARWIN_macosx_CACHED_SYSROOT=($env.SDKROOT)"
     cmake -S llvm -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=($ctx.prefix) -DLLVM_HOST_TRIPLE=($host_triple) -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF -DCOMPILER_RT_ENABLE_XROS=OFF -DCOMPILER_RT_ENABLE_MACCATALYST=OFF -DDARWIN_osx_ARCHS=($darwin_arch) -DDARWIN_osx_BUILTIN_ARCHS=($darwin_arch) -DDARWIN_osx_SKIP_CC_KEXT=ON -DCMAKE_LINKER=ld64.lld -DBUILTINS_CMAKE_ARGS=($crt_args) -DRUNTIMES_CMAKE_ARGS=($crt_args) -DCMAKE_OSX_ARCHITECTURES=($darwin_arch) -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCLANG_DEFAULT_LINKER=lld -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INSTALL_UTILS=ON
