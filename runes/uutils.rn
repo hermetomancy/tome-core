@@ -26,7 +26,7 @@ export const package = {
   deps: {
     # rust provides rustc/cargo; cc for any -sys C deps comes from toolchain-wrappers via rust's
     # runtime deps. gmake is not needed — we drive cargo directly, not the heavyweight uutils Makefile.
-    build: { default: ["rust"] }
+    build: { default: ["rust" "libiconv[macos-*]"] }
     runtime: []
   }
 }
@@ -35,6 +35,9 @@ export def build [ctx] {
   let source_dir = ($ctx.sources.main.dir | path join "coreutils-0.9.0")
   cd $source_dir
   $env.CFLAGS = "-O2"
+  if ($ctx.target | str starts-with "macos-") {
+    $env.RUSTFLAGS = $"($env.RUSTFLAGS) -L native=($env.LIBICONV_PREFIX)/lib"
+  }
   # Multicall build, full unix util set. --locked: the tarball's Cargo.lock is the hashed truth
   # (the documented cargo vendoring policy); cargo verifies each fetched crate against it.
   ^cargo build --release --locked --features unix --jobs ($ctx.nproc)
