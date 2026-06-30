@@ -23,8 +23,6 @@ const RUST_TRIPLES = {
   "macos-x86_64-darwin": "x86_64-apple-darwin"
   "linux-x86_64-musl": "x86_64-unknown-linux-musl"
   "linux-aarch64-musl": "aarch64-unknown-linux-gnu"
-  "linux-x86_64-gnu": "x86_64-unknown-linux-gnu"
-  "linux-aarch64-gnu": "aarch64-unknown-linux-gnu"
   "freebsd-x86_64-unknown": "x86_64-unknown-freebsd"
 }
 
@@ -42,8 +40,6 @@ export const package = {
     "macos-x86_64-darwin"
     "linux-x86_64-musl"
     "linux-aarch64-musl"
-    "linux-x86_64-gnu"
-    "linux-aarch64-gnu"
     "freebsd-x86_64-unknown"
   ]
 
@@ -80,16 +76,6 @@ export const package = {
       sha256: "sha256:630541a6e08412c76062a7a10aba0f737044ecab4d16b7b338049da7db68c90c"
       platform: "linux-aarch64-musl"
       host_libc: "musl"
-    }
-    "linux-x86_64-gnu": {
-      url: "https://static.rust-lang.org/dist/rust-1.96.0-x86_64-unknown-linux-gnu.tar.xz"
-      sha256: "sha256:c295047583a56238ea06b43f849f4b877fa12bfd4c7103f8d9a74c94c9c4e108"
-      platform: "linux-x86_64-gnu"
-    }
-    "linux-aarch64-gnu": {
-      url: "https://static.rust-lang.org/dist/rust-1.96.0-aarch64-unknown-linux-gnu.tar.xz"
-      sha256: "sha256:371eadcca97062219cbd8593628eb5d2802bc370515d085fedce1b56b2baed57"
-      platform: "linux-aarch64-gnu"
     }
     "freebsd-x86_64-unknown": {
       url: "https://static.rust-lang.org/dist/rust-1.96.0-x86_64-unknown-freebsd.tar.xz"

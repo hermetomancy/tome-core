@@ -42,9 +42,15 @@ export def build [ctx] {
   mkdir $bin
   ^cp target/release/coreutils ($bin | path join "coreutils")
   # Symlink each util to the multicall binary (busybox/toybox style; dispatch is on argv[0]).
-  # `coreutils --list` prints the built-in names. Done in one host-sh pass (this seed builds
-  # non-hermetically): `cd` into the bin dir with nu, then a constant sh script — a plain `"..."` is
-  # not interpolated, so `$(...)`/`$u` reach sh literally; no nu string-building or stream capture.
+  # `ln` comes from the bootstrap POSIX tail before build-env exists, then from the managed floor.
   cd $bin
-  ^sh -c "for u in $(./coreutils --list); do [ \"$u\" = coreutils ] && continue; ln -sf coreutils \"$u\"; done"
+  let listed = (^./coreutils --list | complete)
+  if $listed.exit_code != 0 {
+    error make { msg: $listed.stderr }
+  }
+  for u in ($listed.stdout | lines) {
+    if $u != "coreutils" {
+      ^ln -sf coreutils ($u)
+    }
+  }
 }

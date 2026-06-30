@@ -72,10 +72,17 @@ export def build [ctx] {
   # to the musl triple/compiler-rt/unwindlib=none but has no default sysroot, so a bare `cc` (e.g.
   # rustc driving the linker, bypassing the floor's flags) resolves headers/CRT/libc from host /usr,
   # leaking glibc. --sysroot + -B point them at the managed musl. Placed before "$@" so a caller's
-  # explicit --sysroot still wins. Drivers only (inert on llvm-* tools). Empty on macOS, where the
-  # sysroot is the system SDK located at runtime (see sdk_preamble) rather than a baked path.
+  # explicit --sysroot still wins. Drivers only (inert on llvm-* tools). On macOS, the SDK is still
+  # located at runtime (see sdk_preamble), but clang needs a linker-version hint so it emits
+  # `-platform_version` for ld64.lld instead of old Apple ld flags (`-macosx_version_min`).
   let is_musl = ($ctx.target | str ends-with "-musl")
-  let driver_flags = if $is_musl { $" --sysroot=($env.MUSL_PREFIX) -B($env.MUSL_PREFIX)/lib" } else { "" }
+  let driver_flags = if $is_musl {
+    $" --sysroot=($env.MUSL_PREFIX) -B($env.MUSL_PREFIX)/lib"
+  } else if $is_macos {
+    " -mlinker-version=1000"
+  } else {
+    ""
+  }
   # The C++ drivers also need the managed libc++ — musl ships no C++ stdlib, so point clang at the
   # libcxx package's headers/libs (clang already defaults to -stdlib=libc++ via llvm.rn). -nostdinc++
   # drops clang's empty default C++ include dir; --unwindlib=libunwind matches the compiler-rt build

@@ -17,8 +17,6 @@ const RUST_TRIPLES = {
   "macos-x86_64-darwin": "x86_64-apple-darwin"
   "linux-x86_64-musl": "x86_64-unknown-linux-musl"
   "linux-aarch64-musl": "aarch64-unknown-linux-musl"
-  "linux-x86_64-gnu": "x86_64-unknown-linux-gnu"
-  "linux-aarch64-gnu": "aarch64-unknown-linux-gnu"
   "freebsd-x86_64-unknown": "x86_64-unknown-freebsd"
 }
 
@@ -35,8 +33,6 @@ export const package = {
     "macos-x86_64-darwin"
     "linux-x86_64-musl"
     "linux-aarch64-musl"
-    "linux-x86_64-gnu"
-    "linux-aarch64-gnu"
     "freebsd-x86_64-unknown"
   ]
 

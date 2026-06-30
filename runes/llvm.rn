@@ -84,8 +84,6 @@ export def build [ctx] {
     "macos-x86_64-darwin" => "x86_64-apple-darwin"
     "linux-aarch64-musl" => "aarch64-unknown-linux-musl"
     "linux-x86_64-musl" => "x86_64-unknown-linux-musl"
-    "linux-aarch64-gnu" => "aarch64-unknown-linux-gnu"
-    "linux-x86_64-gnu" => "x86_64-unknown-linux-gnu"
     _ => (error make { msg: $"no LLVM host triple mapping for target ($ctx.target)" })
   }
   # Darwin: clang/compiler-rt configure parse `ld -v` for a linker version unless CMAKE_LINKER

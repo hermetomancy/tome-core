@@ -6,7 +6,7 @@ export const package = {
     homepage: "https://musl.libc.org/"
     license: "MIT"
   }
-  targets: ["linux-x86_64-musl" "linux-aarch64-musl" "linux-x86_64-gnu" "linux-aarch64-gnu"]
+  targets: ["linux-x86_64-musl" "linux-aarch64-musl"]
 
   sources: {
     main: {

@@ -6,7 +6,7 @@ export const package = {
     homepage: "https://www.kernel.org/"
     license: "GPL-2.0-only"
   }
-  targets: ["linux-x86_64-musl" "linux-aarch64-musl" "linux-x86_64-gnu" "linux-aarch64-gnu"]
+  targets: ["linux-x86_64-musl" "linux-aarch64-musl"]
 
   sources: {
     main: {
@@ -31,12 +31,13 @@ export def build [ctx] {
   # uapi generation into ./usr/include without rsync; copy the tree ourselves, then drop the
   # per-header `.cmd` build stamps so the package ships only headers.
   #
-  # kbuild compiles host tools (fixdep, unifdef) with HOSTCC, which the musl floor's flags don't
-  # reach. At the managed boundary HOSTCC defaults to the musl clang, whose link then fails hunting
-  # gcc's crtbeginS.o/-lgcc (absent in musl). These tools only run during the build and are never
-  # shipped, so build them with the host's native glibc cc. No-op at the host boundary (cc is
-  # already /usr/bin/cc); the fix at the managed boundary, sidestepping the musl clang.
-  make -j ($nproc) HOSTCC="/usr/bin/cc" headers
+  # kbuild compiles build-time helpers (fixdep, unifdef) with HOSTCC. Feed that path through the
+  # managed compiler and flags instead of escaping to /usr/bin/cc, so even these unshipped helpers
+  # stay inside Grimoire's compiler boundary.
+  let env_keys = ($env | columns)
+  let host_cflags = if ("CFLAGS" in $env_keys) { $env.CFLAGS } else { "" }
+  let host_ldflags = if ("LDFLAGS" in $env_keys) { $env.LDFLAGS } else { "" }
+  make -j ($nproc) HOSTCC="cc" HOSTCFLAGS=($host_cflags) HOSTLDFLAGS=($host_ldflags) headers
   let include_dir = ($ctx.package_dir | path join "include")
   mkdir $include_dir
   ^cp -R usr/include/. $include_dir
